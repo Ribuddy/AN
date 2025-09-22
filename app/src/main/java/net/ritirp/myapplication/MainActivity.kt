@@ -9,12 +9,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.kakao.vectormap.LatLng
-import net.ritirp.myapplication.ui.screens.MapScreen
+import net.ritirp.myapplication.ui.screens.MainScreen
 import net.ritirp.myapplication.ui.screens.NavigationScreen
 import net.ritirp.myapplication.ui.theme.RiTripTheme
 
@@ -42,11 +41,11 @@ fun RiTripApp(modifier: Modifier = Modifier) {
 
     NavHost(
         navController = navController,
-        startDestination = "map",
+        startDestination = "main",
         modifier = modifier
     ) {
-        composable("map") {
-            MapScreen(
+        composable("main") {
+            MainScreen(
                 onNavigationClick = { start, end ->
                     startLocation = start
                     endLocation = end
@@ -56,26 +55,17 @@ fun RiTripApp(modifier: Modifier = Modifier) {
         }
 
         composable("navigation") {
-            val start = startLocation
-            val end = endLocation
-
-            if (start != null && end != null) {
-                NavigationScreen(
-                    startLocation = start,
-                    endLocation = end,
-                    onBackClick = {
-                        navController.popBackStack()
-                    }
-                )
+            startLocation?.let { start ->
+                endLocation?.let { end ->
+                    NavigationScreen(
+                        startLocation = start,
+                        endLocation = end,
+                        onBackClick = {
+                            navController.popBackStack()
+                        }
+                    )
+                }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    RiTripTheme {
-        RiTripApp()
     }
 }

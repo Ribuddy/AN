@@ -4,7 +4,7 @@ import android.Manifest
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,7 +26,8 @@ import net.ritirp.myapplication.services.LocationService
 @Composable
 fun MapScreen(
     modifier: Modifier = Modifier,
-    onNavigationClick: (LatLng, LatLng) -> Unit = { _, _ -> }
+    onNavigationClick: (LatLng, LatLng) -> Unit = { _, _ -> },
+    showFloatingButtons: Boolean = true // 플로팅 버튼 표시 여부
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -54,7 +55,15 @@ fun MapScreen(
             AndroidView(
                 factory = { context ->
                     MapView(context).apply {
-                        start(object : KakaoMapReadyCallback() {
+                        start(object : com.kakao.vectormap.MapLifeCycleCallback() {
+                            override fun onMapDestroy() {
+                                // 지도 리소스 정리
+                            }
+
+                            override fun onMapError(exception: Exception?) {
+                                // 지도 오류 처리
+                            }
+                        }, object : KakaoMapReadyCallback() {
                             override fun onMapReady(map: KakaoMap) {
                                 kakaoMap = map
 
@@ -76,46 +85,48 @@ fun MapScreen(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // UI 컨트롤
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // 현재 위치 버튼
-                FloatingActionButton(
-                    onClick = {
-                        coroutineScope.launch {
-                            val location = locationService.getCurrentLocation()
-                            location?.let {
-                                currentLocation = LatLng.from(it.latitude, it.longitude)
-                                kakaoMap?.moveCamera(
-                                    CameraUpdateFactory.newCenterPosition(
-                                        LatLng.from(it.latitude, it.longitude),
-                                        15
-                                    )
-                                )
-                                showNavigationButton = destinationLocation != null
-                            }
-                        }
-                    }
+            // UI 컨트롤 - showFloatingButtons가 true일 때만 표시
+            if (showFloatingButtons) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Default.LocationOn, contentDescription = "현재 위치")
-                }
-
-                // 네비게이션 버튼
-                if (showNavigationButton) {
+                    // 현재 위치 버튼
                     FloatingActionButton(
                         onClick = {
-                            currentLocation?.let { current ->
-                                destinationLocation?.let { destination ->
-                                    onNavigationClick(current, destination)
+                            coroutineScope.launch {
+                                val location = locationService.getCurrentLocation()
+                                location?.let {
+                                    currentLocation = LatLng.from(it.latitude, it.longitude)
+                                    kakaoMap?.moveCamera(
+                                        CameraUpdateFactory.newCenterPosition(
+                                            LatLng.from(it.latitude, it.longitude),
+                                            15
+                                        )
+                                    )
+                                    showNavigationButton = destinationLocation != null
                                 }
                             }
                         }
                     ) {
-                        Icon(Icons.Default.DirectionsRun, contentDescription = "길찾기")
+                        Icon(Icons.Default.LocationOn, contentDescription = "현재 위치")
+                    }
+
+                    // 네비게이션 버튼
+                    if (showNavigationButton) {
+                        FloatingActionButton(
+                            onClick = {
+                                currentLocation?.let { current ->
+                                    destinationLocation?.let { destination ->
+                                        onNavigationClick(current, destination)
+                                    }
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.Place, contentDescription = "길찾기")
+                        }
                     }
                 }
             }

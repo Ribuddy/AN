@@ -5,8 +5,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DirectionsRun
-import androidx.compose.material.icons.filled.DirectionsBus
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -208,10 +209,10 @@ fun NavigationStepCard(
             // 교통수단 아이콘
             Icon(
                 imageVector = when (step.type) {
-                    "car" -> Icons.Default.DirectionsRun
-                    "subway" -> Icons.Default.DirectionsBus
-                    "walk" -> Icons.Default.DirectionsRun
-                    else -> Icons.Default.DirectionsRun
+                    "car" -> Icons.Default.Place
+                    "subway" -> Icons.Default.LocationOn
+                    "walk" -> Icons.Default.Person
+                    else -> Icons.Default.Person
                 },
                 contentDescription = step.type,
                 tint = MaterialTheme.colorScheme.primary

@@ -22,7 +22,7 @@
         <!-- 카카오맵 API 키 설정 -->
         <meta-data
             android:name="com.kakao.vectormap.APP_KEY"
-            android:value="QtbEgPyWFAp9r2ESjRcUUU34onGKirm8" />
+            android:value="45b6314dd164865c07d22932a73b65b0" />
 
         <activity
             android:name=".MainActivity"

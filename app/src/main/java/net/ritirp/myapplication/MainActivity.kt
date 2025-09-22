@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
             RiTripTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     RiTripApp(
-                        modifier = Modifier.padding(innerPadding)
+                        modifier = Modifier.padding(innerPadding),
                     )
                 }
             }
@@ -42,7 +42,7 @@ fun RiTripApp(modifier: Modifier = Modifier) {
     NavHost(
         navController = navController,
         startDestination = "main",
-        modifier = modifier
+        modifier = modifier,
     ) {
         composable("main") {
             MainScreen(
@@ -50,7 +50,7 @@ fun RiTripApp(modifier: Modifier = Modifier) {
                     startLocation = start
                     endLocation = end
                     navController.navigate("navigation")
-                }
+                },
             )
         }
 
@@ -62,7 +62,7 @@ fun RiTripApp(modifier: Modifier = Modifier) {
                         endLocation = end,
                         onBackClick = {
                             navController.popBackStack()
-                        }
+                        },
                     )
                 }
             }

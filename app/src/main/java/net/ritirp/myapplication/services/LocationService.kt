@@ -7,7 +7,6 @@ import android.location.Location
 import androidx.core.app.ActivityCompat
 
 class LocationService(private val context: Context) {
-
     suspend fun getCurrentLocation(): Location? {
         if (!hasLocationPermission()) {
             return null
@@ -23,7 +22,7 @@ class LocationService(private val context: Context) {
     private fun hasLocationPermission(): Boolean {
         return ActivityCompat.checkSelfPermission(
             context,
-            Manifest.permission.ACCESS_FINE_LOCATION
+            Manifest.permission.ACCESS_FINE_LOCATION,
         ) == PackageManager.PERMISSION_GRANTED
     }
 }

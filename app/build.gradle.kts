@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ktlint)
 }
 
 android {
@@ -39,6 +40,25 @@ android {
     }
 }
 
+configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
+    android.set(true)
+    ignoreFailures.set(true)
+    reporters {
+        reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.PLAIN)
+        reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.CHECKSTYLE)
+    }
+    filter {
+        exclude("**/generated/**")
+        include("**/kotlin/**")
+    }
+    disabledRules.set(setOf(
+        "no-wildcard-imports",
+        "function-naming",
+        "discouraged-comment-location",
+        "max-line-length"
+    ))
+}
+
 dependencies {
 
     implementation(libs.androidx.core.ktx)
@@ -50,7 +70,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
 
-    // 카카오맵 SDK만 사용 (카카오 SDK v2는 제거)
+    // 카카오맵 SDK
     implementation("com.kakao.maps.open:android:2.11.9")
 
     // 위치 서비스

@@ -10,6 +10,5 @@ class GlobalApplication : Application() {
         // 카카오맵 SDK 초기화
 //        KakaoMapSdk.init(this, "QtbEgPyWFAp9r2ESjRcUUU34onGKirm8")
         KakaoMapSdk.init(this, "45b6314dd164865c07d22932a73b65b0")
-
     }
 }

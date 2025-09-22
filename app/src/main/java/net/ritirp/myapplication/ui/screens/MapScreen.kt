@@ -27,7 +27,7 @@ import net.ritirp.myapplication.services.LocationService
 fun MapScreen(
     modifier: Modifier = Modifier,
     onNavigationClick: (LatLng, LatLng) -> Unit = { _, _ -> },
-    showFloatingButtons: Boolean = true // 플로팅 버튼 표시 여부
+    showFloatingButtons: Boolean = true,
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -38,12 +38,13 @@ fun MapScreen(
     val locationService = remember { LocationService(context) }
 
     // 위치 권한 요청
-    val locationPermissions = rememberMultiplePermissionsState(
-        listOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
+    val locationPermissions =
+        rememberMultiplePermissionsState(
+            listOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            ),
         )
-    )
 
     LaunchedEffect(Unit) {
         locationPermissions.launchMultiplePermissionRequest()
@@ -55,61 +56,63 @@ fun MapScreen(
             AndroidView(
                 factory = { context ->
                     MapView(context).apply {
-                        start(object : com.kakao.vectormap.MapLifeCycleCallback() {
-                            override fun onMapDestroy() {
-                                // 지도 리소스 정리
-                            }
-
-                            override fun onMapError(exception: Exception?) {
-                                // 지도 오류 처리
-                            }
-                        }, object : KakaoMapReadyCallback() {
-                            override fun onMapReady(map: KakaoMap) {
-                                kakaoMap = map
-
-                                // 서울 시청을 기본 위치로 설정
-                                val seoulCityHall = LatLng.from(37.5666805, 126.9784147)
-                                map.moveCamera(
-                                    CameraUpdateFactory.newCenterPosition(seoulCityHall, 15)
-                                )
-
-                                // 지도 클릭 이벤트 처리
-                                map.setOnMapClickListener { _, latLng, _, _ ->
-                                    destinationLocation = latLng
-                                    showNavigationButton = currentLocation != null
+                        start(
+                            object : com.kakao.vectormap.MapLifeCycleCallback() {
+                                override fun onMapDestroy() {
+                                    // 지도 리소스 정리
                                 }
-                            }
-                        })
+
+                                override fun onMapError(exception: Exception?) {
+                                    println("카카오맵 오류: ${exception?.message}")
+                                }
+                            },
+                            object : KakaoMapReadyCallback() {
+                                override fun onMapReady(map: KakaoMap) {
+                                    kakaoMap = map
+
+                                    // 서울 시청을 기본 위치로 설정
+                                    val seoulCityHall = LatLng.from(37.5666805, 126.9784147)
+                                    map.moveCamera(
+                                        CameraUpdateFactory.newCenterPosition(seoulCityHall, 15),
+                                    )
+
+                                    // 지도 클릭 이벤트 처리 - 목적지 설정
+                                    map.setOnMapClickListener { _, latLng, _, _ ->
+                                        destinationLocation = latLng
+                                        showNavigationButton = currentLocation != null
+                                        println("목적지 설정: ${latLng.latitude}, ${latLng.longitude}")
+                                    }
+                                }
+                            },
+                        )
                     }
                 },
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             )
 
-            // UI 컨트롤 - showFloatingButtons가 true일 때만 표시
+            // UI 컨트롤
             if (showFloatingButtons) {
                 Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     // 현재 위치 버튼
                     FloatingActionButton(
                         onClick = {
                             coroutineScope.launch {
-                                val location = locationService.getCurrentLocation()
-                                location?.let {
-                                    currentLocation = LatLng.from(it.latitude, it.longitude)
-                                    kakaoMap?.moveCamera(
-                                        CameraUpdateFactory.newCenterPosition(
-                                            LatLng.from(it.latitude, it.longitude),
-                                            15
-                                        )
-                                    )
-                                    showNavigationButton = destinationLocation != null
-                                }
+                                // 에뮬레이터용 가상 위치 (강남역)
+                                val testLocation = LatLng.from(37.4979, 127.0276)
+                                currentLocation = testLocation
+                                kakaoMap?.moveCamera(
+                                    CameraUpdateFactory.newCenterPosition(testLocation, 15),
+                                )
+                                showNavigationButton = destinationLocation != null
+                                println("현재 위치 설정 (테스트): ${testLocation.latitude}, ${testLocation.longitude}")
                             }
-                        }
+                        },
                     ) {
                         Icon(Icons.Default.LocationOn, contentDescription = "현재 위치")
                     }
@@ -120,34 +123,67 @@ fun MapScreen(
                             onClick = {
                                 currentLocation?.let { current ->
                                     destinationLocation?.let { destination ->
+                                        println(
+                                            "길찾기 시작: ${current.latitude}, ${current.longitude} -> ${destination.latitude}, ${destination.longitude}",
+                                        )
                                         onNavigationClick(current, destination)
                                     }
                                 }
-                            }
+                            },
                         ) {
                             Icon(Icons.Default.Place, contentDescription = "길찾기")
                         }
                     }
                 }
             }
+
+            // 테스트용 기능 설명 카드
+            Card(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(16.dp)
+                        .fillMaxWidth(0.8f),
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
+                    ),
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                ) {
+                    Text(
+                        text = "🧪 기능 테스트 방법",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "1. 📍 현재위치 버튼 클릭 → 강남역으로 이동\n2. 🗺️ 지도 아무곳 클릭 → 목적지 설정\n3. 🧭 길찾기 버튼 → 네비게이션 화면",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
         } else {
             // 권한이 필요하다는 메시지
             Card(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(16.dp)
+                modifier =
+                    Modifier
+                        .align(Alignment.Center)
+                        .padding(16.dp),
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
                         text = "지도를 사용하려면 위치 권한이 필요합니다.",
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
-                        onClick = { locationPermissions.launchMultiplePermissionRequest() }
+                        onClick = { locationPermissions.launchMultiplePermissionRequest() },
                     ) {
                         Text("권한 허용")
                     }

@@ -1,0 +1,9 @@
+[*.{kt,kts}]
+# Compose 함수명은 대문자로 시작 가능
+ktlint_function-naming = disabled
+# 와일드카드 임포트 허용 (Compose에서 일반적)
+ktlint_no-wildcard-imports = disabled
+# 줄 길이 제한을 150자로 확장
+max_line_length = 150
+# 주석 관련 규칙 완화
+ktlint_discouraged-comment-location = disabled

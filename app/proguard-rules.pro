@@ -27,3 +27,23 @@
 -dontwarn com.kakao.sdk.**
 -dontwarn com.kakao.maps.open.**
 -dontwarn com.kakao.vectormap.**
+
+# OpenGL ES 및 GPU 렌더링 관련 최적화
+-keep class javax.microedition.khronos.** { *; }
+-keep class android.opengl.** { *; }
+-keep class com.google.android.gles.** { *; }
+-dontwarn javax.microedition.khronos.**
+-dontwarn android.opengl.**
+
+# 네이티브 라이브러리 관련
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# GPU 드라이버 관련 클래스 보존
+-keep class * extends android.view.Surface { *; }
+-keep class * extends android.view.SurfaceView { *; }
+
+# 하드웨어 가속 관련
+-keep class android.view.** { *; }
+-keep class android.graphics.** { *; }

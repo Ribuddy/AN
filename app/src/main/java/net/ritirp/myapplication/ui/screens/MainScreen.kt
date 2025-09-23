@@ -24,7 +24,9 @@ fun MainScreen(
     onNavigationClick: (LatLng, LatLng) -> Unit = { _, _ -> },
 ) {
     var selectedTabIndex by remember { mutableStateOf(0) }
-    var searchText by remember { mutableStateOf("") }
+
+    // MapScreen과 연결하기 위한 상태
+    var mapScreenRef by remember { mutableStateOf<MapScreenController?>(null) }
 
     Box(modifier = modifier.fillMaxSize()) {
         // 지도 화면
@@ -32,6 +34,9 @@ fun MainScreen(
             onNavigationClick = onNavigationClick,
             showFloatingButtons = false, // 메인페이지에서는 기본 플로팅 버튼 숨김
             modifier = Modifier.fillMaxSize(),
+            onMapControllerReady = { controller ->
+                mapScreenRef = controller
+            }
         )
 
         // 상단 검색바
@@ -83,7 +88,10 @@ fun MainScreen(
         ) {
             // 현재 위치 버튼
             FloatingActionButton(
-                onClick = { /* 현재 위치로 이동 */ },
+                onClick = {
+                    // MapScreen의 현재 위치 기능 호출
+                    mapScreenRef?.moveToCurrentLocation()
+                },
                 modifier = Modifier.size(48.dp),
                 containerColor = Color.White,
                 contentColor = Color.Black,

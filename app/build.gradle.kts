@@ -93,6 +93,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
 
+    // Material Icons Extended - 확장 아이콘 지원
+    implementation("androidx.compose.material:material-icons-extended:1.5.4")
+
     // 카카오맵 SDK
     implementation("com.kakao.maps.open:android:2.11.9")
 

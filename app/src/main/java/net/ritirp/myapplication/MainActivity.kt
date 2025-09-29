@@ -112,125 +112,14 @@ fun MapScreen(
     onCurrentLocationClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var kakaoMap by remember { mutableStateOf<KakaoMap?>(null) }
-    var isMapReady by remember { mutableStateOf(false) }
-
-    // 지도가 준비되고 나서 초기 마커들 표시
-    LaunchedEffect(kakaoMap, isMapReady) {
-        if (kakaoMap != null && isMapReady) {
-            kakaoMap?.let { map ->
-                // 현재 위치 마커 추가
-                MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation)
-                // 팀 마커들 추가
-                MapUtils.addTeamMarkers(map, uiState.markers)
-            }
-        }
-    }
-
-    // 지도 상태 변화 감지 및 업데이트 (지도가 준비된 후에만)
-    LaunchedEffect(uiState.currentLocation, isMapReady) {
-        if (isMapReady) {
-            kakaoMap?.let { map ->
-                MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation)
-            }
-        }
-    }
-
-    LaunchedEffect(uiState.destination, isMapReady) {
-        if (isMapReady) {
-            kakaoMap?.let { map ->
-                uiState.destination?.let { dest ->
-                    println("DEBUG: UI State destination changed, calling MapUtils.addDestinationMarker")
-                    MapUtils.addDestinationMarker(map, dest)
-                } ?: run {
-                    println("DEBUG: UI State destination is null, no marker to add")
-                }
-            }
-        } else {
-            println("DEBUG: Map not ready yet, cannot add destination marker")
-        }
-    }
-
-    LaunchedEffect(uiState.route, isMapReady) {
-        if (isMapReady) {
-            kakaoMap?.let { map ->
-                uiState.route?.let { route ->
-                    MapUtils.drawRoute(map, route)
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(uiState.markers, isMapReady) {
-        if (isMapReady) {
-            kakaoMap?.let { map ->
-                MapUtils.addTeamMarkers(map, uiState.markers)
-            }
-        }
-    }
-
-    Box(modifier = modifier.fillMaxSize()) {
-        // 카카오 지도
-        AndroidView(
-            modifier = Modifier.fillMaxSize(),
-            factory = { context ->
-                MapView(context).apply {
-                    start(
-                        object : MapLifeCycleCallback() {
-                            override fun onMapDestroy() {
-                                isMapReady = false
-                            }
-                            override fun onMapError(e: Exception) {
-                                e.printStackTrace()
-                            }
-                        },
-                        object : KakaoMapReadyCallback() {
-                            override fun onMapReady(map: KakaoMap) {
-                                kakaoMap = map
-                                setupMap(map, uiState.currentLocation)
-
-                                // 지도 클릭 리스너
-                                map.setOnMapClickListener { _, position, _, _ ->
-                                    println("DEBUG: Map clicked at ${position.latitude}, ${position.longitude}")
-                                    onMapClick(LocationData.fromLatLng(position))
-                                }
-
-                                // 지도 준비 완료 표시
-                                isMapReady = true
-                                println("DEBUG: Map is ready, setting isMapReady = true")
-                            }
-                        }
-                    )
-                }
-            }
-        )
-
-        // UI 오버레이들
-        TopSearchBar(
-            onFriendClick = { /* TODO: 친구 기능 */ }
-        )
-
-        FollowToggleButton(
-            isFollowing = uiState.isFollowingLocation,
-            onToggle = onFollowToggle,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 40.dp, end = 16.dp)
-        )
-
-        CurrentLocationButton(
-            isFollowing = uiState.isFollowingLocation,
-            onClick = onCurrentLocationClick,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(bottom = 120.dp, end = 20.dp)
-        )
-
-        // 로딩 상태
-        if (uiState.isLoading) {
-            LoadingIndicator()
-        }
-    }
+    MapScreenContent(
+        uiState = uiState,
+        onMapClick = onMapClick,
+        onFollowToggle = onFollowToggle,
+        onCurrentLocationClick = onCurrentLocationClick,
+        isPreview = false, // 실제 앱에서는 false
+        modifier = modifier
+    )
 }
 
 @Composable
@@ -261,53 +150,171 @@ private fun setupMap(map: KakaoMap, defaultLocation: LocationData) {
 @Preview(showBackground = true, name = "지도 앱 프리뷰")
 @Composable
 fun MapAppPreview() {
-    MapAppPreviewContent()
-}
+    // 프리뷰용 가짜 UI 상태 생성
+    val previewUiState = net.ritirp.myapplication.presentation.viewmodel.MapUiState(
+        currentLocation = LocationData.DEFAULT_SEOUL,
+        destination = LocationData(37.5700, 126.9800), // 예시 목적지
+        isFollowingLocation = false,
+        currentTab = BottomTab.MAP,
+        markers = listOf(
+            net.ritirp.myapplication.data.model.MarkerData(
+                id = "team_1",
+                location = LocationData(37.5700, 126.9800),
+                title = "팀원 1",
+                emoji = "👤",
+                type = net.ritirp.myapplication.data.model.MarkerType.TEAM_MEMBER
+            )
+        )
+    )
 
-@Composable
-private fun MapAppPreviewContent() {
     Scaffold(
         bottomBar = {
             BottomNavigationBar(
-                currentTab = BottomTab.MAP,
+                currentTab = previewUiState.currentTab,
                 onTabSelected = { }
             )
         }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color(0xFFF5F5F5))
-        ) {
-            // 지도 영역 (프리뷰용 회색 배경)
+        // 실제 MapScreen 컴포넌트를 호출하되, 지도만 프리뷰용으로 대체
+        MapScreenContent(
+            uiState = previewUiState,
+            onMapClick = { },
+            onFollowToggle = { },
+            onCurrentLocationClick = { },
+            isPreview = true, // 프리뷰 모드 플래그
+            modifier = Modifier.padding(paddingValues)
+        )
+    }
+}
+
+@Composable
+private fun MapScreenContent(
+    uiState: net.ritirp.myapplication.presentation.viewmodel.MapUiState,
+    onMapClick: (LocationData) -> Unit,
+    onFollowToggle: () -> Unit,
+    onCurrentLocationClick: () -> Unit,
+    isPreview: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier.fillMaxSize()) {
+        if (isPreview) {
+            // 프리뷰용 지도 영역
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color(0xFFE0E0E0)),
                 contentAlignment = Alignment.Center
             ) {
-                Text("지도 영역", fontSize = 18.sp, color = Color.Gray)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("지도 영역", fontSize = 18.sp, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("📍 현재위치", fontSize = 14.sp, color = Color.Red)
+                    if (uiState.destination != null) {
+                        Text("🚩 목적지", fontSize = 14.sp, color = Color.Blue)
+                    }
+                    Text("👤 팀원 ${uiState.markers.size}명", fontSize = 14.sp, color = Color.Green)
+                }
             }
-
-            // UI 오버레이들
-            TopSearchBar()
-
-            FollowToggleButton(
-                isFollowing = false,
-                onToggle = { },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 40.dp, end = 16.dp)
-            )
-
-            CurrentLocationButton(
-                isFollowing = false,
-                onClick = { },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 120.dp, end = 20.dp)
+        } else {
+            // 실제 카카오 지도
+            MapContent(
+                uiState = uiState,
+                onMapClick = onMapClick
             )
         }
+
+        // 공통 UI 오버레이들
+        TopSearchBar(
+            onFriendClick = { /* TODO: 친구 기능 */ }
+        )
+
+        CurrentLocationButton(
+            isFollowing = uiState.isFollowingLocation,
+            onClick = onCurrentLocationClick,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 120.dp, end = 20.dp)
+        )
+
+        // 로딩 상태
+        if (uiState.isLoading) {
+            LoadingIndicator()
+        }
     }
+}
+
+@Composable
+private fun MapContent(
+    uiState: net.ritirp.myapplication.presentation.viewmodel.MapUiState,
+    onMapClick: (LocationData) -> Unit
+) {
+    var kakaoMap by remember { mutableStateOf<KakaoMap?>(null) }
+    var isMapReady by remember { mutableStateOf(false) }
+
+    // 지도 상태 변화 감지 및 업데이트
+    LaunchedEffect(kakaoMap, isMapReady, uiState.currentLocation) {
+        if (kakaoMap != null && isMapReady) {
+            kakaoMap?.let { map ->
+                MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation)
+                MapUtils.addTeamMarkers(map, uiState.markers)
+            }
+        }
+    }
+
+    LaunchedEffect(uiState.destination, isMapReady) {
+        if (isMapReady) {
+            kakaoMap?.let { map ->
+                uiState.destination?.let { dest ->
+                    println("DEBUG: UI State destination changed, calling MapUtils.addDestinationMarker")
+                    MapUtils.addDestinationMarker(map, dest)
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(uiState.route, isMapReady) {
+        if (isMapReady) {
+            kakaoMap?.let { map ->
+                uiState.route?.let { route ->
+                    MapUtils.drawRoute(map, route)
+                }
+            }
+        }
+    }
+
+    AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = { context ->
+            MapView(context).apply {
+                start(
+                    object : MapLifeCycleCallback() {
+                        override fun onMapDestroy() {
+                            isMapReady = false
+                        }
+                        override fun onMapError(e: Exception) {
+                            e.printStackTrace()
+                        }
+                    },
+                    object : KakaoMapReadyCallback() {
+                        override fun onMapReady(map: KakaoMap) {
+                            kakaoMap = map
+                            setupMap(map, uiState.currentLocation)
+
+                            // 지도 클릭 리스너
+                            map.setOnMapClickListener { _, position, _, _ ->
+                                println("DEBUG: Map clicked at ${position.latitude}, ${position.longitude}")
+                                onMapClick(LocationData.fromLatLng(position))
+                            }
+
+                            // 지도 준비 완료 표시
+                            isMapReady = true
+                            println("DEBUG: Map is ready, setting isMapReady = true")
+                        }
+                    }
+                )
+            }
+        }
+    )
 }

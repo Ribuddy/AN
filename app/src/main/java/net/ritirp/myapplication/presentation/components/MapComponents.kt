@@ -2,6 +2,7 @@ package net.ritirp.myapplication.presentation.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
@@ -14,10 +15,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import net.ritirp.myapplication.R
 import net.ritirp.myapplication.presentation.viewmodel.BottomTab
 
 /**
@@ -64,32 +68,6 @@ fun TopSearchBar(
 }
 
 /**
- * Follow 토글 버튼
- */
-@Composable
-fun FollowToggleButton(
-    isFollowing: Boolean,
-    onToggle: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        onClick = onToggle,
-        shape = RoundedCornerShape(10.dp),
-        shadowElevation = 4.dp,
-        color = if (isFollowing) Color(0xFF2E7DFF) else Color(0xFF3E3E3E),
-        modifier = modifier
-    ) {
-        Box(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
-            Text(
-                if (isFollowing) "FOLLOW ON" else "FOLLOW OFF",
-                fontSize = 11.sp,
-                color = Color.White
-            )
-        }
-    }
-}
-
-/**
  * 현재 위치 버튼
  */
 @Composable
@@ -101,16 +79,19 @@ fun CurrentLocationButton(
     Surface(
         onClick = onClick,
         color = Color.White,
-        shape = RoundedCornerShape(50),
-        shadowElevation = 6.dp,
-        modifier = modifier
+        shape = CircleShape,
+        shadowElevation = 8.dp,
+        modifier = modifier.size(56.dp)
     ) {
-        Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                if (isFollowing) "◎" else "●",
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = Color(0xFF2E7DFF)
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_current_location),
+                contentDescription = "현재 위치",
+                tint = if (isFollowing) Color(0xFF666666) else Color(0xFF0163BA),
+                modifier = Modifier.size(40.dp)
             )
         }
     }
@@ -160,4 +141,13 @@ fun LoadingIndicator(
             color = Color(0xFF2E7DFF)
         )
     }
+}
+
+@Preview
+@Composable
+fun PreviewTopSearchBar() {
+    CurrentLocationButton(
+        isFollowing = false,
+        onClick = {}
+    )
 }

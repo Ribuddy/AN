@@ -44,6 +44,10 @@ class MapViewModel(
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
 
+    // 카메라 이동 이벤트를 위한 StateFlow 추가
+    private val _cameraUpdateEvent = MutableStateFlow<LocationData?>(null)
+    val cameraUpdateEvent: StateFlow<LocationData?> = _cameraUpdateEvent.asStateFlow()
+
     init {
         observeRepositoryData()
         initializeData()
@@ -89,11 +93,17 @@ class MapViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                mapRepository.getCurrentLocation()
+                val newLocation = mapRepository.getCurrentLocation()
+                // 현재 위치를 가져온 후 카메라를 해당 위치로 이동시키기 위한 이벤트 발생
+                _cameraUpdateEvent.value = newLocation
             } finally {
                 _uiState.value = _uiState.value.copy(isLoading = false)
             }
         }
+    }
+
+    fun clearCameraUpdateEvent() {
+        _cameraUpdateEvent.value = null
     }
 
     fun onMapClicked(location: LocationData) {

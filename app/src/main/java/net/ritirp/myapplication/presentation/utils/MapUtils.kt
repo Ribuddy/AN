@@ -240,4 +240,27 @@ object MapUtils {
             labelManager.getLayer(layerId)?.removeAll()
         }
     }
+
+    /**
+     * 카메라를 특정 위치로 이동
+     */
+    fun moveCameraToLocation(map: KakaoMap?, location: LocationData, zoomLevel: Int = 13) {
+        if (map == null) {
+            println("DEBUG: Map is null, cannot move camera")
+            return
+        }
+
+        try {
+            val cameraPosition = com.kakao.vectormap.camera.CameraPosition.from(
+                location.latitude,
+                location.longitude,
+                zoomLevel, 0.0, 0.0, 0.0
+            )
+            map.moveCamera(com.kakao.vectormap.camera.CameraUpdateFactory.newCameraPosition(cameraPosition))
+            println("DEBUG: Camera moved to ${location.latitude}, ${location.longitude} with zoom $zoomLevel")
+        } catch (e: Exception) {
+            println("DEBUG: Exception while moving camera: ${e.message}")
+            e.printStackTrace()
+        }
+    }
 }

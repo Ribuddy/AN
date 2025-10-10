@@ -88,6 +88,7 @@ fun MapApp(viewModel: MapViewModel) {
             BottomTab.MAP -> {
                 MapScreen(
                     uiState = uiState,
+                    viewModel = viewModel, // ViewModel 전달
                     onMapClick = viewModel::onMapClicked,
                     onFollowToggle = viewModel::toggleFollowLocation,
                     onCurrentLocationClick = viewModel::getCurrentLocation,
@@ -107,6 +108,7 @@ fun MapApp(viewModel: MapViewModel) {
 @Composable
 fun MapScreen(
     uiState: net.ritirp.myapplication.presentation.viewmodel.MapUiState,
+    viewModel: MapViewModel,
     onMapClick: (LocationData) -> Unit,
     onFollowToggle: () -> Unit,
     onCurrentLocationClick: () -> Unit,
@@ -114,6 +116,7 @@ fun MapScreen(
 ) {
     MapScreenContent(
         uiState = uiState,
+        viewModel = viewModel,
         onMapClick = onMapClick,
         onFollowToggle = onFollowToggle,
         onCurrentLocationClick = onCurrentLocationClick,
@@ -139,11 +142,11 @@ private fun setupMap(map: KakaoMap, defaultLocation: LocationData) {
     val cameraPosition = CameraPosition.from(
         defaultLocation.latitude,
         defaultLocation.longitude,
-        10, 0.0, 0.0, 0.0  // 줌 레벨을 10으로 조정 (더 넓은 범위)
+        13, 0.0, 0.0, 0.0  // 줌 레벨을 13으로 조정
     )
     map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
-    map.moveCamera(CameraUpdateFactory.zoomTo(15))
-    println("DEBUG: Map setup completed with zoom level 10 at ${defaultLocation.latitude}, ${defaultLocation.longitude}")
+    map.moveCamera(CameraUpdateFactory.zoomTo(13))  // 줌 레벨을 13으로 변경
+    println("DEBUG: Map setup completed with zoom level 13 at ${defaultLocation.latitude}, ${defaultLocation.longitude}")
 }
 
 // 프리뷰용 컴포넌트들
@@ -190,6 +193,7 @@ fun MapAppPreview() {
 @Composable
 private fun MapScreenContent(
     uiState: net.ritirp.myapplication.presentation.viewmodel.MapUiState,
+    viewModel: MapViewModel? = null, // ViewModel 매개변수 추가
     onMapClick: (LocationData) -> Unit,
     onFollowToggle: () -> Unit,
     onCurrentLocationClick: () -> Unit,
@@ -221,6 +225,7 @@ private fun MapScreenContent(
             // 실제 카카오 지도
             MapContent(
                 uiState = uiState,
+                viewModel = viewModel,
                 onMapClick = onMapClick
             )
         }
@@ -248,10 +253,27 @@ private fun MapScreenContent(
 @Composable
 private fun MapContent(
     uiState: net.ritirp.myapplication.presentation.viewmodel.MapUiState,
+    viewModel: MapViewModel? = null, // ViewModel 매개변수 추가
     onMapClick: (LocationData) -> Unit
 ) {
     var kakaoMap by remember { mutableStateOf<KakaoMap?>(null) }
     var isMapReady by remember { mutableStateOf(false) }
+
+    // 카메라 이동 이벤트 감지
+    viewModel?.let { vm ->
+        val cameraUpdateEvent by vm.cameraUpdateEvent.collectAsStateWithLifecycle()
+
+        LaunchedEffect(cameraUpdateEvent) {
+            cameraUpdateEvent?.let { location ->
+                if (kakaoMap != null && isMapReady) {
+                    println("DEBUG: Moving camera to current location: ${location.latitude}, ${location.longitude}")
+                    MapUtils.moveCameraToLocation(kakaoMap, location, 13)  // 줌 레벨을 13으로 변경
+                    // 이벤트 처리 후 초기화 (무한 루프 방지)
+                    vm.clearCameraUpdateEvent()
+                }
+            }
+        }
+    }
 
     // 지도 상태 변화 감지 및 업데이트
     LaunchedEffect(kakaoMap, isMapReady, uiState.currentLocation) {

@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import net.ritirp.myapplication.data.model.LocationData
 import net.ritirp.myapplication.data.model.MarkerData
@@ -24,23 +23,24 @@ data class MapUiState(
     val isFollowingLocation: Boolean = false,
     val isLocationPermissionGranted: Boolean = false,
     val currentTab: BottomTab = BottomTab.MAP,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
 )
 
-enum class BottomTab(val label: String) {
+enum class BottomTab(
+    val label: String,
+) {
     MAP("지도"),
     REPORT("주행 리포트"),
     FRIEND("친구"),
-    MY("MY")
+    MY("MY"),
 }
 
 /**
  * 지도 ViewModel
  */
 class MapViewModel(
-    private val mapRepository: MapRepository
+    private val mapRepository: MapRepository,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
 
@@ -112,9 +112,10 @@ class MapViewModel(
     }
 
     fun toggleFollowLocation() {
-        _uiState.value = _uiState.value.copy(
-            isFollowingLocation = !_uiState.value.isFollowingLocation
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                isFollowingLocation = !_uiState.value.isFollowingLocation,
+            )
     }
 
     fun selectTab(tab: BottomTab) {
@@ -126,7 +127,7 @@ class MapViewModel(
  * ViewModel Factory
  */
 class MapViewModelFactory(
-    private val mapRepository: MapRepository
+    private val mapRepository: MapRepository,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

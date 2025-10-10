@@ -1,7 +1,6 @@
 package net.ritirp.myapplication
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -37,7 +36,6 @@ import net.ritirp.myapplication.presentation.viewmodel.MapViewModelFactory
  * MVVM 패턴을 적용한 메인 액티비티
  */
 class MainActivity : ComponentActivity() {
-
     private val mapRepository by lazy {
         MapRepository(LocationServices.getFusedLocationProviderClient(this))
     }
@@ -80,9 +78,9 @@ fun MapApp(viewModel: MapViewModel) {
         bottomBar = {
             BottomNavigationBar(
                 currentTab = uiState.currentTab,
-                onTabSelected = viewModel::selectTab
+                onTabSelected = viewModel::selectTab,
             )
-        }
+        },
     ) { paddingValues ->
         when (uiState.currentTab) {
             BottomTab.MAP -> {
@@ -92,13 +90,13 @@ fun MapApp(viewModel: MapViewModel) {
                     onMapClick = viewModel::onMapClicked,
                     onFollowToggle = viewModel::toggleFollowLocation,
                     onCurrentLocationClick = viewModel::getCurrentLocation,
-                    modifier = Modifier.padding(paddingValues)
+                    modifier = Modifier.padding(paddingValues),
                 )
             }
             else -> {
                 PlaceholderScreen(
                     tabName = uiState.currentTab.label,
-                    modifier = Modifier.padding(paddingValues)
+                    modifier = Modifier.padding(paddingValues),
                 )
             }
         }
@@ -112,7 +110,7 @@ fun MapScreen(
     onMapClick: (LocationData) -> Unit,
     onFollowToggle: () -> Unit,
     onCurrentLocationClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     MapScreenContent(
         uiState = uiState,
@@ -121,31 +119,38 @@ fun MapScreen(
         onFollowToggle = onFollowToggle,
         onCurrentLocationClick = onCurrentLocationClick,
         isPreview = false, // 실제 앱에서는 false
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
 @Composable
 fun PlaceholderScreen(
     tabName: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Text("$tabName 준비중", fontSize = 18.sp)
     }
 }
 
-private fun setupMap(map: KakaoMap, defaultLocation: LocationData) {
-    val cameraPosition = CameraPosition.from(
-        defaultLocation.latitude,
-        defaultLocation.longitude,
-        13, 0.0, 0.0, 0.0  // 줌 레벨을 13으로 조정
-    )
+private fun setupMap(
+    map: KakaoMap,
+    defaultLocation: LocationData,
+) {
+    val cameraPosition =
+        CameraPosition.from(
+            defaultLocation.latitude,
+            defaultLocation.longitude,
+            13,
+            0.0,
+            0.0,
+            0.0, // 줌 레벨을 13으로 조정
+        )
     map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
-    map.moveCamera(CameraUpdateFactory.zoomTo(13))  // 줌 레벨을 13으로 변경
+    map.moveCamera(CameraUpdateFactory.zoomTo(13)) // 줌 레벨을 13으로 변경
     println("DEBUG: Map setup completed with zoom level 13 at ${defaultLocation.latitude}, ${defaultLocation.longitude}")
 }
 
@@ -154,29 +159,31 @@ private fun setupMap(map: KakaoMap, defaultLocation: LocationData) {
 @Composable
 fun MapAppPreview() {
     // 프리뷰용 가짜 UI 상태 생성
-    val previewUiState = net.ritirp.myapplication.presentation.viewmodel.MapUiState(
-        currentLocation = LocationData.DEFAULT_SEOUL,
-        destination = LocationData(37.5700, 126.9800), // 예시 목적지
-        isFollowingLocation = false,
-        currentTab = BottomTab.MAP,
-        markers = listOf(
-            net.ritirp.myapplication.data.model.MarkerData(
-                id = "team_1",
-                location = LocationData(37.5700, 126.9800),
-                title = "팀원 1",
-                emoji = "👤",
-                type = net.ritirp.myapplication.data.model.MarkerType.TEAM_MEMBER
-            )
+    val previewUiState =
+        net.ritirp.myapplication.presentation.viewmodel.MapUiState(
+            currentLocation = LocationData.DEFAULT_SEOUL,
+            destination = LocationData(37.5700, 126.9800), // 예시 목적지
+            isFollowingLocation = false,
+            currentTab = BottomTab.MAP,
+            markers =
+                listOf(
+                    net.ritirp.myapplication.data.model.MarkerData(
+                        id = "team_1",
+                        location = LocationData(37.5700, 126.9800),
+                        title = "팀원 1",
+                        emoji = "👤",
+                        type = net.ritirp.myapplication.data.model.MarkerType.TEAM_MEMBER,
+                    ),
+                ),
         )
-    )
 
     Scaffold(
         bottomBar = {
             BottomNavigationBar(
                 currentTab = previewUiState.currentTab,
-                onTabSelected = { }
+                onTabSelected = { },
             )
-        }
+        },
     ) { paddingValues ->
         // 실제 MapScreen 컴포넌트를 호출하되, 지도만 프리뷰용으로 대체
         MapScreenContent(
@@ -185,7 +192,7 @@ fun MapAppPreview() {
             onFollowToggle = { },
             onCurrentLocationClick = { },
             isPreview = true, // 프리뷰 모드 플래그
-            modifier = Modifier.padding(paddingValues)
+            modifier = Modifier.padding(paddingValues),
         )
     }
 }
@@ -198,19 +205,20 @@ private fun MapScreenContent(
     onFollowToggle: () -> Unit,
     onCurrentLocationClick: () -> Unit,
     isPreview: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         if (isPreview) {
             // 프리뷰용 지도 영역
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFFE0E0E0)),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFE0E0E0)),
+                contentAlignment = Alignment.Center,
             ) {
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text("지도 영역", fontSize = 18.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.height(8.dp))
@@ -226,21 +234,22 @@ private fun MapScreenContent(
             MapContent(
                 uiState = uiState,
                 viewModel = viewModel,
-                onMapClick = onMapClick
+                onMapClick = onMapClick,
             )
         }
 
         // 공통 UI 오버레이들
         TopSearchBar(
-            onFriendClick = { /* TODO: 친구 기능 */ }
+            onFriendClick = { /* TODO: 친구 기능 */ },
         )
 
         CurrentLocationButton(
             isFollowing = uiState.isFollowingLocation,
             onClick = onCurrentLocationClick,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(bottom = 120.dp, end = 20.dp)
+            modifier =
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 120.dp, end = 20.dp),
         )
 
         // 로딩 상태
@@ -254,7 +263,7 @@ private fun MapScreenContent(
 private fun MapContent(
     uiState: net.ritirp.myapplication.presentation.viewmodel.MapUiState,
     viewModel: MapViewModel? = null, // ViewModel 매개변수 추가
-    onMapClick: (LocationData) -> Unit
+    onMapClick: (LocationData) -> Unit,
 ) {
     var kakaoMap by remember { mutableStateOf<KakaoMap?>(null) }
     var isMapReady by remember { mutableStateOf(false) }
@@ -267,7 +276,7 @@ private fun MapContent(
             cameraUpdateEvent?.let { location ->
                 if (kakaoMap != null && isMapReady) {
                     println("DEBUG: Moving camera to current location: ${location.latitude}, ${location.longitude}")
-                    MapUtils.moveCameraToLocation(kakaoMap, location, 13)  // 줌 레벨을 13으로 변경
+                    MapUtils.moveCameraToLocation(kakaoMap, location, 13) // 줌 레벨을 13으로 변경
                     // 이벤트 처리 후 초기화 (무한 루프 방지)
                     vm.clearCameraUpdateEvent()
                 }
@@ -315,6 +324,7 @@ private fun MapContent(
                         override fun onMapDestroy() {
                             isMapReady = false
                         }
+
                         override fun onMapError(e: Exception) {
                             e.printStackTrace()
                         }
@@ -334,9 +344,9 @@ private fun MapContent(
                             isMapReady = true
                             println("DEBUG: Map is ready, setting isMapReady = true")
                         }
-                    }
+                    },
                 )
             }
-        }
+        },
     )
 }

@@ -18,7 +18,7 @@ import kotlin.coroutines.resume
  * 위치 및 지도 관련 데이터를 관리하는 Repository
  */
 class MapRepository(
-    private val fusedLocationClient: FusedLocationProviderClient
+    private val fusedLocationClient: FusedLocationProviderClient,
 ) {
     private val _currentLocation = MutableStateFlow(LocationData.DEFAULT_SEOUL)
     val currentLocation: Flow<LocationData> = _currentLocation.asStateFlow()
@@ -33,32 +33,33 @@ class MapRepository(
     val markers: Flow<List<MarkerData>> = _markers.asStateFlow()
 
     @SuppressLint("MissingPermission")
-    suspend fun getCurrentLocation(): LocationData {
-        return suspendCancellableCoroutine { continuation ->
-            fusedLocationClient.getCurrentLocation(
-                Priority.PRIORITY_HIGH_ACCURACY,
-                CancellationTokenSource().token
-            ).addOnSuccessListener { location ->
-                if (location != null) {
-                    val locationData = LocationData(location.latitude, location.longitude)
+    suspend fun getCurrentLocation(): LocationData =
+        suspendCancellableCoroutine { continuation ->
+            fusedLocationClient
+                .getCurrentLocation(
+                    Priority.PRIORITY_HIGH_ACCURACY,
+                    CancellationTokenSource().token,
+                ).addOnSuccessListener { location ->
+                    if (location != null) {
+                        val locationData = LocationData(location.latitude, location.longitude)
 
-                    // 에뮬레이터 위치 감지 및 서울로 대체
-                    val finalLocation = if (isEmulatorLocation(locationData)) {
-                        LocationData.DEFAULT_SEOUL
+                        // 에뮬레이터 위치 감지 및 서울로 대체
+                        val finalLocation =
+                            if (isEmulatorLocation(locationData)) {
+                                LocationData.DEFAULT_SEOUL
+                            } else {
+                                locationData
+                            }
+
+                        _currentLocation.value = finalLocation
+                        continuation.resume(finalLocation)
                     } else {
-                        locationData
+                        continuation.resume(LocationData.DEFAULT_SEOUL)
                     }
-
-                    _currentLocation.value = finalLocation
-                    continuation.resume(finalLocation)
-                } else {
+                }.addOnFailureListener {
                     continuation.resume(LocationData.DEFAULT_SEOUL)
                 }
-            }.addOnFailureListener {
-                continuation.resume(LocationData.DEFAULT_SEOUL)
-            }
         }
-    }
 
     fun setDestination(location: LocationData) {
         println("DEBUG: Setting destination in repository: ${location.latitude}, ${location.longitude}")
@@ -70,7 +71,11 @@ class MapRepository(
         val current = _currentLocation.value
         val dest = _destination.value
 
-        println("DEBUG: Updating route. Current: ${current.latitude}, ${current.longitude}, Dest: ${dest?.let { "${it.latitude}, ${it.longitude}" } ?: "null"}")
+        println(
+            "DEBUG: Updating route. Current: ${current.latitude}, ${current.longitude}, Dest: ${dest?.let {
+                "${it.latitude}, ${it.longitude}"
+            } ?: "null"}",
+        )
 
         if (dest != null) {
             // 간단한 직선 경로 생성
@@ -83,7 +88,10 @@ class MapRepository(
         }
     }
 
-    private fun generateRoutePoints(start: LocationData, end: LocationData): List<LocationData> {
+    private fun generateRoutePoints(
+        start: LocationData,
+        end: LocationData,
+    ): List<LocationData> {
         val points = mutableListOf<LocationData>()
         val numPoints = 10
 
@@ -98,33 +106,32 @@ class MapRepository(
     }
 
     fun initializeTeamMarkers() {
-        val teamMarkers = listOf(
-            MarkerData(
-                id = "team_1",
-                location = LocationData(37.5700, 126.9800),
-                title = "팀원 1",
-                emoji = "👤",
-                type = MarkerType.TEAM_MEMBER
-            ),
-            MarkerData(
-                id = "team_2",
-                location = LocationData(37.5600, 126.9700),
-                title = "팀원 2",
-                emoji = "👤",
-                type = MarkerType.TEAM_MEMBER
-            ),
-            MarkerData(
-                id = "team_3",
-                location = LocationData(37.5750, 126.9850),
-                title = "팀원 3",
-                emoji = "👤",
-                type = MarkerType.TEAM_MEMBER
+        val teamMarkers =
+            listOf(
+                MarkerData(
+                    id = "team_1",
+                    location = LocationData(37.5700, 126.9800),
+                    title = "팀원 1",
+                    emoji = "👤",
+                    type = MarkerType.TEAM_MEMBER,
+                ),
+                MarkerData(
+                    id = "team_2",
+                    location = LocationData(37.5600, 126.9700),
+                    title = "팀원 2",
+                    emoji = "👤",
+                    type = MarkerType.TEAM_MEMBER,
+                ),
+                MarkerData(
+                    id = "team_3",
+                    location = LocationData(37.5750, 126.9850),
+                    title = "팀원 3",
+                    emoji = "👤",
+                    type = MarkerType.TEAM_MEMBER,
+                ),
             )
-        )
         _markers.value = teamMarkers
     }
 
-    private fun isEmulatorLocation(location: LocationData): Boolean {
-        return location.latitude in 37.0..38.0 && location.longitude in -123.0..-121.0
-    }
+    private fun isEmulatorLocation(location: LocationData): Boolean = location.latitude in 37.0..38.0 && location.longitude in -123.0..-121.0
 }

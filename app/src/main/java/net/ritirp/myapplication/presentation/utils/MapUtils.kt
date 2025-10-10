@@ -3,7 +3,6 @@ package net.ritirp.myapplication.presentation.utils
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.kakao.vectormap.KakaoMap
-import com.kakao.vectormap.LatLng
 import com.kakao.vectormap.label.LabelLayerOptions
 import com.kakao.vectormap.label.LabelOptions
 import com.kakao.vectormap.label.LabelStyle
@@ -18,11 +17,13 @@ import net.ritirp.myapplication.data.model.RouteData
  * 지도 관련 유틸리티 함수들
  */
 object MapUtils {
-
     /**
      * 현재 위치 마커 추가/업데이트
      */
-    fun addOrUpdateCurrentLocationMarker(map: KakaoMap?, location: LocationData) {
+    fun addOrUpdateCurrentLocationMarker(
+        map: KakaoMap?,
+        location: LocationData,
+    ) {
         if (map == null) {
             println("DEBUG: Map is null")
             return
@@ -60,9 +61,11 @@ object MapUtils {
             val textStyle = LabelTextStyle.from(48, red)
             val style = LabelStyle.from(textStyle)
 
-            val options = LabelOptions.from("current_location_marker", location.toLatLng())
-                .setStyles(style)
-                .setTexts(textBuilder)
+            val options =
+                LabelOptions
+                    .from("current_location_marker", location.toLatLng())
+                    .setStyles(style)
+                    .setTexts(textBuilder)
 
             val label = layer.addLabel(options)
             if (label != null) {
@@ -70,7 +73,6 @@ object MapUtils {
             } else {
                 println("DEBUG: Failed to add current location marker")
             }
-
         } catch (e: Exception) {
             println("DEBUG: Exception while adding current location marker: ${e.message}")
             e.printStackTrace()
@@ -80,7 +82,10 @@ object MapUtils {
     /**
      * 목적지 마커 추가
      */
-    fun addDestinationMarker(map: KakaoMap, location: LocationData) {
+    fun addDestinationMarker(
+        map: KakaoMap,
+        location: LocationData,
+    ) {
         val labelManager = map.labelManager
         if (labelManager == null) {
             println("DEBUG: LabelManager is null for destination marker")
@@ -111,9 +116,11 @@ object MapUtils {
             val textStyle = LabelTextStyle.from(56, blue) // 48 → 56으로 크기 증가
             val style = LabelStyle.from(textStyle)
 
-            val options = LabelOptions.from("destination_marker", location.toLatLng())
-                .setStyles(style)
-                .setTexts(textBuilder)
+            val options =
+                LabelOptions
+                    .from("destination_marker", location.toLatLng())
+                    .setStyles(style)
+                    .setTexts(textBuilder)
 
             val label = layer.addLabel(options)
             if (label != null) {
@@ -121,17 +128,17 @@ object MapUtils {
             } else {
                 println("DEBUG: Failed to add destination marker")
             }
-
         } catch (e: Exception) {
             println("DEBUG: Exception adding destination marker: ${e.message}")
             e.printStackTrace()
 
             // 백업 방식: 간단한 원형 마커
             try {
-                val layer = labelManager.getLayer("destination_layer") ?: run {
-                    val layerOptions = LabelLayerOptions.from("destination_layer")
-                    labelManager.addLayer(layerOptions)
-                }
+                val layer =
+                    labelManager.getLayer("destination_layer") ?: run {
+                        val layerOptions = LabelLayerOptions.from("destination_layer")
+                        labelManager.addLayer(layerOptions)
+                    }
 
                 layer?.let { l ->
                     val red = Color(0xFFFF0000).toArgb()
@@ -139,9 +146,11 @@ object MapUtils {
                     val textStyle = LabelTextStyle.from(40, red)
                     val style = LabelStyle.from(textStyle)
 
-                    val options = LabelOptions.from("backup_destination", location.toLatLng())
-                        .setStyles(style)
-                        .setTexts(textBuilder)
+                    val options =
+                        LabelOptions
+                            .from("backup_destination", location.toLatLng())
+                            .setStyles(style)
+                            .setTexts(textBuilder)
 
                     val backupLabel = l.addLabel(options)
                     println("DEBUG: Backup destination marker created: ${backupLabel != null}")
@@ -155,16 +164,20 @@ object MapUtils {
     /**
      * 팀원 마커들 추가
      */
-    fun addTeamMarkers(map: KakaoMap, markers: List<MarkerData>) {
+    fun addTeamMarkers(
+        map: KakaoMap,
+        markers: List<MarkerData>,
+    ) {
         val labelManager = map.labelManager ?: return
 
         println("DEBUG: Adding team markers, count: ${markers.size}")
 
         try {
-            val layer = labelManager.getLayer("team_layer") ?: run {
-                val layerOptions = LabelLayerOptions.from("team_layer").setZOrder(10000)
-                labelManager.addLayer(layerOptions)
-            }
+            val layer =
+                labelManager.getLayer("team_layer") ?: run {
+                    val layerOptions = LabelLayerOptions.from("team_layer").setZOrder(10000)
+                    labelManager.addLayer(layerOptions)
+                }
 
             // 기존 마커들 제거
             layer?.removeAll()
@@ -178,9 +191,11 @@ object MapUtils {
                 val textStyle = LabelTextStyle.from(40, green)
                 val style = LabelStyle.from(textStyle)
 
-                val options = LabelOptions.from(marker.id, marker.location.toLatLng())
-                    .setStyles(style)
-                    .setTexts(textBuilder)
+                val options =
+                    LabelOptions
+                        .from(marker.id, marker.location.toLatLng())
+                        .setStyles(style)
+                        .setTexts(textBuilder)
 
                 val label = layer?.addLabel(options)
                 if (label != null) {
@@ -189,7 +204,6 @@ object MapUtils {
                     println("DEBUG: Failed to add team marker ${marker.id}")
                 }
             }
-
         } catch (e: Exception) {
             println("DEBUG: Failed to add team markers: ${e.message}")
             e.printStackTrace()
@@ -199,14 +213,18 @@ object MapUtils {
     /**
      * 경로 표시 (점선)
      */
-    fun drawRoute(map: KakaoMap, route: RouteData) {
+    fun drawRoute(
+        map: KakaoMap,
+        route: RouteData,
+    ) {
         val labelManager = map.labelManager ?: return
 
         try {
-            val layer = labelManager.getLayer("route_layer") ?: run {
-                val layerOptions = LabelLayerOptions.from("route_layer").setZOrder(5000)
-                labelManager.addLayer(layerOptions)
-            }
+            val layer =
+                labelManager.getLayer("route_layer") ?: run {
+                    val layerOptions = LabelLayerOptions.from("route_layer").setZOrder(5000)
+                    labelManager.addLayer(layerOptions)
+                }
 
             // 기존 경로 제거
             layer?.removeAll()
@@ -218,13 +236,14 @@ object MapUtils {
                 val textStyle = LabelTextStyle.from(12, blue)
                 val style = LabelStyle.from(textStyle)
 
-                val options = LabelOptions.from("route_point_$index", point.toLatLng())
-                    .setStyles(style)
-                    .setTexts(textBuilder)
+                val options =
+                    LabelOptions
+                        .from("route_point_$index", point.toLatLng())
+                        .setStyles(style)
+                        .setTexts(textBuilder)
 
                 layer?.addLabel(options)
             }
-
         } catch (e: Exception) {
             println("DEBUG: Failed to draw route: ${e.message}")
         }
@@ -244,19 +263,30 @@ object MapUtils {
     /**
      * 카메라를 특정 위치로 이동
      */
-    fun moveCameraToLocation(map: KakaoMap?, location: LocationData, zoomLevel: Int = 13) {
+    fun moveCameraToLocation(
+        map: KakaoMap?,
+        location: LocationData,
+        zoomLevel: Int = 13,
+    ) {
         if (map == null) {
             println("DEBUG: Map is null, cannot move camera")
             return
         }
 
         try {
-            val cameraPosition = com.kakao.vectormap.camera.CameraPosition.from(
-                location.latitude,
-                location.longitude,
-                zoomLevel, 0.0, 0.0, 0.0
+            val cameraPosition =
+                com.kakao.vectormap.camera.CameraPosition.from(
+                    location.latitude,
+                    location.longitude,
+                    zoomLevel,
+                    0.0,
+                    0.0,
+                    0.0,
+                )
+            map.moveCamera(
+                com.kakao.vectormap.camera.CameraUpdateFactory
+                    .newCameraPosition(cameraPosition),
             )
-            map.moveCamera(com.kakao.vectormap.camera.CameraUpdateFactory.newCameraPosition(cameraPosition))
             println("DEBUG: Camera moved to ${location.latitude}, ${location.longitude} with zoom $zoomLevel")
         } catch (e: Exception) {
             println("DEBUG: Exception while moving camera: ${e.message}")

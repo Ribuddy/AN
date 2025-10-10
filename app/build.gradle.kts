@@ -17,7 +17,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
+
         // OpenGL ES 관련 설정
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
@@ -34,27 +34,27 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
-            
+
             // 릴리스 모드에서 GL 최적화
             isDebuggable = false
         }
     }
-    
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    
+
     kotlinOptions {
         jvmTarget = "11"
     }
-    
+
     buildFeatures {
         compose = true
     }
-    
+
     // 패키징 옵션으로 중복 리소스 제거
     packaging {
         resources {
@@ -72,14 +72,28 @@ configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
     }
     filter {
         exclude("**/generated/**")
+        exclude("**/build/**")
         include("**/kotlin/**")
     }
-    disabledRules.set(setOf(
-        "no-wildcard-imports",
-        "function-naming",
-        "discouraged-comment-location",
-        "max-line-length"
-    ))
+    // disabledRules 대신 .editorconfig 파일 사용 또는 여기서 직접 설정
+}
+
+// .editorconfig 파일을 생성하여 규칙 관리
+tasks.register("createEditorConfig") {
+    doLast {
+        val editorConfig = file("${project.rootDir}/.editorconfig")
+        if (!editorConfig.exists()) {
+            editorConfig.writeText("""
+                [*.{kt,kts}]
+                ktlint_standard_function-naming = disabled
+                ktlint_standard_no-wildcard-imports = disabled
+                ktlint_standard_comment-wrapping = disabled
+                ktlint_standard_discouraged-comment-location = disabled
+                ktlint_standard_max-line-length = disabled
+            """.trimIndent())
+            println("Created .editorconfig file")
+        }
+    }
 }
 
 dependencies {

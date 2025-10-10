@@ -7,14 +7,12 @@ import com.kakao.vectormap.LatLng
  */
 data class LocationData(
     val latitude: Double,
-    val longitude: Double
+    val longitude: Double,
 ) {
     fun toLatLng(): LatLng = LatLng.from(latitude, longitude)
 
     companion object {
-        fun fromLatLng(latLng: LatLng): LocationData {
-            return LocationData(latLng.latitude, latLng.longitude)
-        }
+        fun fromLatLng(latLng: LatLng): LocationData = LocationData(latLng.latitude, latLng.longitude)
 
         // 서울 시청 기본 위치
         val DEFAULT_SEOUL = LocationData(37.5666102, 126.9783881)
@@ -27,7 +25,7 @@ data class LocationData(
 data class RouteData(
     val start: LocationData,
     val destination: LocationData,
-    val routePoints: List<LocationData> = emptyList()
+    val routePoints: List<LocationData> = emptyList(),
 )
 
 /**
@@ -38,11 +36,11 @@ data class MarkerData(
     val location: LocationData,
     val title: String,
     val emoji: String,
-    val type: MarkerType
+    val type: MarkerType,
 )
 
 enum class MarkerType {
     CURRENT_LOCATION,
     DESTINATION,
-    TEAM_MEMBER
+    TEAM_MEMBER,
 }

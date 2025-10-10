@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -30,27 +29,28 @@ import net.ritirp.myapplication.presentation.viewmodel.BottomTab
 @Composable
 fun TopSearchBar(
     onFriendClick: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(top = 40.dp, start = 16.dp, end = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(top = 40.dp, start = 16.dp, end = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             Modifier
                 .weight(1f)
                 .shadow(4.dp, RoundedCornerShape(12.dp))
                 .background(Color.White, RoundedCornerShape(12.dp))
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
             Text(
                 "오늘은 어디를 달릴까요?",
                 fontSize = 15.sp,
                 color = Color.Gray,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
         Spacer(Modifier.width(8.dp))
@@ -58,7 +58,7 @@ fun TopSearchBar(
             onClick = onFriendClick,
             shape = RoundedCornerShape(12.dp),
             shadowElevation = 4.dp,
-            color = Color(0xFF3E3E3E)
+            color = Color(0xFF3E3E3E),
         ) {
             Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                 Text("👥", fontSize = 20.sp)
@@ -74,24 +74,24 @@ fun TopSearchBar(
 fun CurrentLocationButton(
     isFollowing: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Surface(
         onClick = onClick,
         color = Color.White,
         shape = CircleShape,
         shadowElevation = 8.dp,
-        modifier = modifier.size(56.dp)
+        modifier = modifier.size(56.dp),
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_current_location),
                 contentDescription = "현재 위치",
                 tint = if (isFollowing) Color(0xFF666666) else Color(0xFF0163BA),
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(40.dp),
             )
         }
     }
@@ -104,23 +104,23 @@ fun CurrentLocationButton(
 fun BottomNavigationBar(
     currentTab: BottomTab,
     onTabSelected: (BottomTab) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     NavigationBar(
         containerColor = Color.White,
-        modifier = modifier
+        modifier = modifier,
     ) {
         listOf(
             BottomTab.MAP to Icons.Default.Home,
             BottomTab.REPORT to Icons.Default.Build,
             BottomTab.FRIEND to Icons.Default.Group,
-            BottomTab.MY to Icons.Default.Person
+            BottomTab.MY to Icons.Default.Person,
         ).forEach { (tab, icon) ->
             NavigationBarItem(
                 selected = currentTab == tab,
                 onClick = { onTabSelected(tab) },
                 icon = { Icon(icon, contentDescription = tab.label) },
-                label = { Text(tab.label) }
+                label = { Text(tab.label) },
             )
         }
     }
@@ -130,15 +130,13 @@ fun BottomNavigationBar(
  * 로딩 인디케이터
  */
 @Composable
-fun LoadingIndicator(
-    modifier: Modifier = Modifier
-) {
+fun LoadingIndicator(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         CircularProgressIndicator(
-            color = Color(0xFF2E7DFF)
+            color = Color(0xFF2E7DFF),
         )
     }
 }
@@ -148,6 +146,6 @@ fun LoadingIndicator(
 fun PreviewTopSearchBar() {
     CurrentLocationButton(
         isFollowing = false,
-        onClick = {}
+        onClick = {},
     )
 }

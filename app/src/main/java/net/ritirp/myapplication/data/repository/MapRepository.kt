@@ -133,5 +133,6 @@ class MapRepository(
         _markers.value = teamMarkers
     }
 
-    private fun isEmulatorLocation(location: LocationData): Boolean = location.latitude in 37.0..38.0 && location.longitude in -123.0..-121.0
+    private fun isEmulatorLocation(location: LocationData): Boolean =
+        location.latitude in 37.0..38.0 && location.longitude in -123.0..-121.0
 }

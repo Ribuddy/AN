@@ -17,6 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -27,6 +30,8 @@ import com.kakao.vectormap.camera.CameraUpdateFactory
 import net.ritirp.myapplication.data.model.LocationData
 import net.ritirp.myapplication.data.repository.MapRepository
 import net.ritirp.myapplication.presentation.components.*
+import net.ritirp.myapplication.presentation.screen.LoginScreen
+import net.ritirp.myapplication.presentation.screen.SplashScreen
 import net.ritirp.myapplication.presentation.utils.MapUtils
 import net.ritirp.myapplication.presentation.viewmodel.BottomTab
 import net.ritirp.myapplication.presentation.viewmodel.MapViewModel
@@ -47,6 +52,52 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            AppNavigation(viewModel = viewModel)
+        }
+    }
+}
+
+@Composable
+fun AppNavigation(viewModel: MapViewModel) {
+    val navController = rememberNavController()
+
+    NavHost(
+        navController = navController,
+        startDestination = "splash",
+    ) {
+        // 스플래시 화면
+        composable("splash") {
+            SplashScreen(
+                onNavigateToLogin = {
+                    navController.navigate("login") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        // 로그인 화면
+        composable("login") {
+            LoginScreen(
+                onGoogleLoginClick = {
+                    // TODO: 구글 로그인 구현
+                    // 임시로 메인 화면으로 이동
+                    navController.navigate("main") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                },
+                onKakaoLoginClick = {
+                    // TODO: 카카오 로그인 구현
+                    // 임시로 메인 화면으로 이동
+                    navController.navigate("main") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        // 메인 화면 (지도)
+        composable("main") {
             MapApp(viewModel = viewModel)
         }
     }

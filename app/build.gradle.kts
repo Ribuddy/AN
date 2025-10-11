@@ -73,26 +73,8 @@ configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
     filter {
         exclude("**/generated/**")
         exclude("**/build/**")
+        exclude("**/*.kts")
         include("**/kotlin/**")
-    }
-    // disabledRules 대신 .editorconfig 파일 사용 또는 여기서 직접 설정
-}
-
-// .editorconfig 파일을 생성하여 규칙 관리
-tasks.register("createEditorConfig") {
-    doLast {
-        val editorConfig = file("${project.rootDir}/.editorconfig")
-        if (!editorConfig.exists()) {
-            editorConfig.writeText("""
-                [*.{kt,kts}]
-                ktlint_standard_function-naming = disabled
-                ktlint_standard_no-wildcard-imports = disabled
-                ktlint_standard_comment-wrapping = disabled
-                ktlint_standard_discouraged-comment-location = disabled
-                ktlint_standard_max-line-length = disabled
-            """.trimIndent())
-            println("Created .editorconfig file")
-        }
     }
 }
 

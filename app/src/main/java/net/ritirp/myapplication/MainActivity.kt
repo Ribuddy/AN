@@ -103,8 +103,8 @@ fun AppNavigation(
         // 로그인 화면
         composable("login") {
             LoginScreen(
-                onGoogleLoginSuccess = { idToken ->
-                    loginViewModel.handleOAuthCallback(idToken)
+                onGoogleLoginSuccess = { idToken, userName, userEmail ->
+                    loginViewModel.handleOAuthCallback(idToken, userName, userEmail)
                 },
                 onKakaoLoginClick = {
                     // TODO: 카카오 로그인 구현

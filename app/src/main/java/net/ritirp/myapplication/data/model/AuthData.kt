@@ -17,15 +17,15 @@ data class LoginResponse(
     val accessToken: String,
     val refreshToken: String? = null,
     val userId: String,
-    val email: String,
-    val name: String,
+    val email: String? = null,
+    val name: String? = null,
 )
 
 // 사용자 정보
 data class UserData(
     val userId: String,
-    val email: String,
-    val name: String,
+    val email: String? = null,
+    val name: String? = null,
     val profileImageUrl: String? = null,
 )
 

@@ -84,8 +84,12 @@ class AuthRepository(private val context: Context) {
                 preferences[REFRESH_TOKEN_KEY] = it
             }
             preferences[USER_ID_KEY] = loginResponse.userId
-            preferences[USER_EMAIL_KEY] = loginResponse.email
-            preferences[USER_NAME_KEY] = loginResponse.name
+            loginResponse.email?.let {
+                preferences[USER_EMAIL_KEY] = it
+            }
+            loginResponse.name?.let {
+                preferences[USER_NAME_KEY] = it
+            }
         }
     }
 

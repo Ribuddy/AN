@@ -37,7 +37,7 @@ import net.ritirp.myapplication.data.model.AuthState
  */
 @Composable
 fun LoginScreen(
-    onGoogleLoginSuccess: (String) -> Unit,
+    onGoogleLoginSuccess: (idToken: String, userName: String?, userEmail: String?) -> Unit,
     onKakaoLoginClick: () -> Unit,
     authState: AuthState = AuthState.Idle,
     modifier: Modifier = Modifier,
@@ -46,9 +46,10 @@ fun LoginScreen(
     val context = LocalContext.current
 
     // GoogleSignInClient 인스턴스 생성
-    val googleSignInClient = remember {
-        getGoogleSignInClient(context)
-    }
+    val googleSignInClient =
+        remember {
+            getGoogleSignInClient(context)
+        }
 
     // Google 로그인 결과 처리를 위한 ActivityResultLauncher
     val googleSignInLauncher =
@@ -242,16 +243,20 @@ private fun getGoogleSignInClient(context: android.content.Context): GoogleSignI
  */
 private fun handleSignInResult(
     completedTask: Task<GoogleSignInAccount>,
-    onSuccess: (String) -> Unit,
+    onSuccess: (String, String?, String?) -> Unit,
     onError: (String) -> Unit,
 ) {
     try {
         val account = completedTask.getResult(ApiException::class.java)
         val idToken = account?.idToken
+        val userName = account?.displayName
+        val userEmail = account?.email
 
         if (idToken != null) {
-            Log.d("LoginScreen", "Google ID Token: $idToken") // 백엔드로 전송될 ID 토큰 로그 출력
-            onSuccess(idToken)
+            Log.d("LoginScreen", "Google ID Token: $idToken")
+            Log.d("LoginScreen", "User Name: $userName")
+            Log.d("LoginScreen", "User Email: $userEmail")
+            onSuccess(idToken, userName, userEmail)
         } else {
             onError("Google ID 토큰을 가져오는 데 실패했습니다.")
         }
@@ -265,7 +270,7 @@ private fun handleSignInResult(
 @Composable
 fun LoginScreenPreview() {
     LoginScreen(
-        onGoogleLoginSuccess = {},
+        onGoogleLoginSuccess = { _, _, _ -> },
         onKakaoLoginClick = {},
         onLoginError = {},
     )

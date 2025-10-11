@@ -19,8 +19,8 @@ interface AuthApi {
      * 클라이언트에서 얻은 Google ID 토큰을 서버로 보내 유효성을 검증하고,
      * 서버의 JWT 토큰을 발급받습니다.
      */
-    @POST("v2/auth/google/verify-id-token")
+    @POST("v2/auth/google/login")
     suspend fun verifyGoogleToken(
-        @Body request: Map<String, String>
+        @Body request: Map<String, String>,
     ): Response<ApiResponse<LoginResponse>>
 }

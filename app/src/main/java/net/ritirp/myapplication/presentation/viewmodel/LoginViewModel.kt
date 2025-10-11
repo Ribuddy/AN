@@ -20,12 +20,15 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
-
     /**
      * OAuth 콜백 처리
      * Deep Link로 받은 Authorization Code를 서버로 전달합니다.
      */
-    fun handleOAuthCallback(idToken: String) {
+    fun handleOAuthCallback(
+        idToken: String,
+        userName: String? = null,
+        userEmail: String? = null,
+    ) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
 
@@ -33,18 +36,19 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             Log.d("LoginViewModel", "========== Google 로그인 시작 ==========")
             Log.d("LoginViewModel", "서버로 보낼 ID Token (앞 50자): ${idToken.take(50)}...")
             Log.d("LoginViewModel", "ID Token 전체 길이: ${idToken.length}")
+            Log.d("LoginViewModel", "Google 사용자 정보: name=$userName, email=$userEmail")
 
             val result = authRepository.handleGoogleCallback(idToken)
 
             _authState.value =
                 if (result.isSuccess) {
                     val loginResponse = result.getOrNull()!!
-                    Log.d("LoginViewModel", "로그인 성공! 사용자: ${loginResponse.name} (${loginResponse.email})")
+                    Log.d("LoginViewModel", "로그인 성공! userId: ${loginResponse.userId}")
                     AuthState.Success(
                         net.ritirp.myapplication.data.model.UserData(
                             userId = loginResponse.userId,
-                            email = loginResponse.email,
-                            name = loginResponse.name,
+                            email = userEmail ?: loginResponse.email,
+                            name = userName ?: loginResponse.name,
                         ),
                     )
                 } else {

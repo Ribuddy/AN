@@ -27,6 +27,7 @@ import com.google.android.gms.location.LocationServices
 import com.kakao.vectormap.*
 import com.kakao.vectormap.camera.CameraPosition
 import com.kakao.vectormap.camera.CameraUpdateFactory
+import net.ritirp.myapplication.data.model.AuthState
 import net.ritirp.myapplication.data.model.LocationData
 import net.ritirp.myapplication.data.repository.MapRepository
 import net.ritirp.myapplication.presentation.components.*
@@ -34,6 +35,7 @@ import net.ritirp.myapplication.presentation.screen.LoginScreen
 import net.ritirp.myapplication.presentation.screen.SplashScreen
 import net.ritirp.myapplication.presentation.utils.MapUtils
 import net.ritirp.myapplication.presentation.viewmodel.BottomTab
+import net.ritirp.myapplication.presentation.viewmodel.LoginViewModel
 import net.ritirp.myapplication.presentation.viewmodel.MapViewModel
 import net.ritirp.myapplication.presentation.viewmodel.MapViewModelFactory
 
@@ -45,21 +47,43 @@ class MainActivity : ComponentActivity() {
         MapRepository(LocationServices.getFusedLocationProviderClient(this))
     }
 
-    private val viewModel: MapViewModel by viewModels {
+    private val mapViewModel: MapViewModel by viewModels {
         MapViewModelFactory(mapRepository)
     }
 
+    private val loginViewModel: LoginViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
-            AppNavigation(viewModel = viewModel)
+            AppNavigation(
+                mapViewModel = mapViewModel,
+                loginViewModel = loginViewModel,
+            )
         }
     }
 }
 
 @Composable
-fun AppNavigation(viewModel: MapViewModel) {
+fun AppNavigation(
+    mapViewModel: MapViewModel,
+    loginViewModel: LoginViewModel,
+) {
     val navController = rememberNavController()
+    val authState by loginViewModel.authState.collectAsStateWithLifecycle()
+
+    // 로그인 상태에 따른 자동 네비게이션
+    LaunchedEffect(authState) {
+        when (authState) {
+            is AuthState.Success -> {
+                navController.navigate("main") {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+            else -> {}
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -79,26 +103,22 @@ fun AppNavigation(viewModel: MapViewModel) {
         // 로그인 화면
         composable("login") {
             LoginScreen(
-                onGoogleLoginClick = {
-                    // TODO: 구글 로그인 구현
-                    // 임시로 메인 화면으로 이동
-                    navController.navigate("main") {
-                        popUpTo("login") { inclusive = true }
-                    }
+                onGoogleLoginSuccess = { idToken ->
+                    loginViewModel.handleOAuthCallback(idToken)
                 },
                 onKakaoLoginClick = {
                     // TODO: 카카오 로그인 구현
-                    // 임시로 메인 화면으로 이동
-                    navController.navigate("main") {
-                        popUpTo("login") { inclusive = true }
-                    }
+                },
+                authState = authState,
+                onLoginError = { errorMessage ->
+                    loginViewModel.setError(errorMessage)
                 },
             )
         }
 
         // 메인 화면 (지도)
         composable("main") {
-            MapApp(viewModel = viewModel)
+            MapApp(viewModel = mapViewModel)
         }
     }
 }

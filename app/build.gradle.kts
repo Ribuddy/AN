@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -28,7 +29,6 @@ android {
         debug {
             // 디버그 모드에서 GL 에러 로깅 최소화
             isDebuggable = true
-            applicationIdSuffix = ".debug"
         }
         release {
             isMinifyEnabled = false
@@ -108,6 +108,18 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // Google Sign-In SDK
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
+
+    // Chrome Custom Tabs (OAuth 로그인용) -> 더 이상 필요 없음
+    // implementation("androidx.browser:browser:1.7.0")
+
+    // DataStore (토큰 저장용)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // ViewModel
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

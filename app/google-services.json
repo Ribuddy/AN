@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "649923655769",
+    "project_id": "ribuddy-main",
+    "storage_bucket": "ribuddy-main.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:649923655769:android:8ad31412a521e8ac489948",
+        "android_client_info": {
+          "package_name": "net.ritirp.myapplication"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "649923655769-933ci1q9lvq6g4kpgmevmccmm08mvpsj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0Mqu_C-aIspig0M-tOg8RyfAKM43WexU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "649923655769-933ci1q9lvq6g4kpgmevmccmm08mvpsj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -17,6 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -24,11 +27,15 @@ import com.google.android.gms.location.LocationServices
 import com.kakao.vectormap.*
 import com.kakao.vectormap.camera.CameraPosition
 import com.kakao.vectormap.camera.CameraUpdateFactory
+import net.ritirp.myapplication.data.model.AuthState
 import net.ritirp.myapplication.data.model.LocationData
 import net.ritirp.myapplication.data.repository.MapRepository
 import net.ritirp.myapplication.presentation.components.*
+import net.ritirp.myapplication.presentation.screen.LoginScreen
+import net.ritirp.myapplication.presentation.screen.SplashScreen
 import net.ritirp.myapplication.presentation.utils.MapUtils
 import net.ritirp.myapplication.presentation.viewmodel.BottomTab
+import net.ritirp.myapplication.presentation.viewmodel.LoginViewModel
 import net.ritirp.myapplication.presentation.viewmodel.MapViewModel
 import net.ritirp.myapplication.presentation.viewmodel.MapViewModelFactory
 
@@ -40,14 +47,78 @@ class MainActivity : ComponentActivity() {
         MapRepository(LocationServices.getFusedLocationProviderClient(this))
     }
 
-    private val viewModel: MapViewModel by viewModels {
+    private val mapViewModel: MapViewModel by viewModels {
         MapViewModelFactory(mapRepository)
     }
 
+    private val loginViewModel: LoginViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
-            MapApp(viewModel = viewModel)
+            AppNavigation(
+                mapViewModel = mapViewModel,
+                loginViewModel = loginViewModel,
+            )
+        }
+    }
+}
+
+@Composable
+fun AppNavigation(
+    mapViewModel: MapViewModel,
+    loginViewModel: LoginViewModel,
+) {
+    val navController = rememberNavController()
+    val authState by loginViewModel.authState.collectAsStateWithLifecycle()
+
+    // 로그인 상태에 따른 자동 네비게이션
+    LaunchedEffect(authState) {
+        when (authState) {
+            is AuthState.Success -> {
+                navController.navigate("main") {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+            else -> {}
+        }
+    }
+
+    NavHost(
+        navController = navController,
+        startDestination = "splash",
+    ) {
+        // 스플래시 화면
+        composable("splash") {
+            SplashScreen(
+                onNavigateToLogin = {
+                    navController.navigate("login") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        // 로그인 화면
+        composable("login") {
+            LoginScreen(
+                onGoogleLoginSuccess = { idToken, userName, userEmail ->
+                    loginViewModel.handleOAuthCallback(idToken, userName, userEmail)
+                },
+                onKakaoLoginClick = {
+                    // TODO: 카카오 로그인 구현
+                },
+                authState = authState,
+                onLoginError = { errorMessage ->
+                    loginViewModel.setError(errorMessage)
+                },
+            )
+        }
+
+        // 메인 화면 (지도)
+        composable("main") {
+            MapApp(viewModel = mapViewModel)
         }
     }
 }

@@ -2,6 +2,7 @@ package net.ritirp.myapplication
 
 import android.Manifest
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -12,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,9 +30,11 @@ import com.kakao.vectormap.*
 import com.kakao.vectormap.camera.CameraPosition
 import com.kakao.vectormap.camera.CameraUpdateFactory
 import net.ritirp.myapplication.data.model.AuthState
+import net.ritirp.myapplication.data.model.CrashEvent
 import net.ritirp.myapplication.data.model.LocationData
 import net.ritirp.myapplication.data.repository.MapRepository
 import net.ritirp.myapplication.presentation.components.*
+import net.ritirp.myapplication.presentation.screen.CrashAlertScreen
 import net.ritirp.myapplication.presentation.screen.LoginScreen
 import net.ritirp.myapplication.presentation.screen.SplashScreen
 import net.ritirp.myapplication.presentation.utils.MapUtils
@@ -72,6 +76,22 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
     val authState by loginViewModel.authState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    // 사고 감지 이벤트 수신
+    var currentCrashEvent by remember { mutableStateOf<CrashEvent?>(null) }
+
+    LaunchedEffect(Unit) {
+        val crashDetector = GlobalApplication.getCrashDetector(context)
+        crashDetector.crashEvents.collect { event ->
+            Log.e("AppNavigation", "🚨 Crash event received, navigating to crash screen")
+            currentCrashEvent = event
+            navController.navigate("crash") {
+                // 백스택에 추가하되, 중복 방지
+                launchSingleTop = true
+            }
+        }
+    }
 
     // 로그인 상태에 따른 자동 네비게이션
     LaunchedEffect(authState) {
@@ -118,14 +138,49 @@ fun AppNavigation(
 
         // 메인 화면 (지도)
         composable("main") {
-            MapApp(viewModel = mapViewModel)
+            MapApp(
+                viewModel = mapViewModel,
+                onNavigateToCrashSettings = {
+                    navController.navigate("crash_settings")
+                }
+            )
+        }
+
+        // 사고 감지 경고 화면
+        composable("crash") {
+            currentCrashEvent?.let { event ->
+                CrashAlertScreen(
+                    crashEvent = event,
+                    onConfirm = {
+                        // TODO: 긴급 연락 전송 로직
+                        Log.d("AppNavigation", "Emergency contact sent")
+                        navController.popBackStack()
+                    },
+                    onCancel = {
+                        Log.d("AppNavigation", "User is OK, dismissing alert")
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
+
+        // 사고 감지 설정 화면
+        composable("crash_settings") {
+            val crashSettingsRepository = GlobalApplication.getCrashSettingsRepository(context)
+            val crashSettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.CrashSettingsViewModel>(
+                factory = net.ritirp.myapplication.presentation.viewmodel.CrashSettingsViewModelFactory(crashSettingsRepository)
+            )
+            net.ritirp.myapplication.presentation.screen.CrashSettingsScreen(
+                viewModel = crashSettingsViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun MapApp(viewModel: MapViewModel) {
+fun MapApp(viewModel: MapViewModel, onNavigateToCrashSettings: () -> Unit = {}) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
 
@@ -157,11 +212,17 @@ fun MapApp(viewModel: MapViewModel) {
             BottomTab.MAP -> {
                 MapScreen(
                     uiState = uiState,
-                    viewModel = viewModel, // ViewModel 전달
+                    viewModel = viewModel,
                     onMapClick = viewModel::onMapClicked,
                     onFollowToggle = viewModel::toggleFollowLocation,
                     onCurrentLocationClick = viewModel::getCurrentLocation,
                     modifier = Modifier.padding(paddingValues),
+                )
+            }
+            BottomTab.MY -> {
+                net.ritirp.myapplication.presentation.screen.MyScreen(
+                    onNavigateToCrashSettings = onNavigateToCrashSettings,
+                    modifier = Modifier.padding(paddingValues)
                 )
             }
             else -> {

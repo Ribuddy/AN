@@ -100,7 +100,7 @@ class TeamRepository(private val context: Context) {
                 return Result.failure(Exception("로그인이 필요합니다."))
             }
 
-            val request = JoinOrLeaveTeamRequest(id = teamId)
+            val request = JoinOrLeaveTeamRequest(code = teamId)
             Log.d("TeamRepository", "팀 참여 요청: teamId=$teamId")
             val response = teamApi.joinTeam("Bearer $token", request)
 
@@ -128,7 +128,7 @@ class TeamRepository(private val context: Context) {
                 return Result.failure(Exception("로그인이 필요합니다."))
             }
 
-            val request = JoinOrLeaveTeamRequest(id = teamId)
+            val request = JoinOrLeaveTeamRequest(code = teamId)
             Log.d("TeamRepository", "팀 탈퇴 요청: teamId=$teamId")
             val response = teamApi.leaveTeam("Bearer $token", request)
 
@@ -192,20 +192,33 @@ class TeamRepository(private val context: Context) {
             val response = teamApi.getTeamJoinCode("Bearer $token", teamId)
 
             Log.d("TeamRepository", "응답 코드: ${response.code()}")
+            Log.d("TeamRepository", "응답 성공 여부: ${response.isSuccessful}")
             Log.d("TeamRepository", "응답 바디: ${response.body()}")
+
+            if (!response.isSuccessful) {
+                val errorBody = response.errorBody()?.string()
+                Log.e("TeamRepository", "에러 응답: $errorBody")
+
+                // API가 없는 경우 팀 ID를 그대로 반환
+                if (response.code() == 404) {
+                    Log.w("TeamRepository", "참여 코드 API가 없어서 팀 ID를 사용합니다")
+                    return Result.success(teamId)
+                }
+            }
 
             if (response.isSuccessful && response.body()?.isSuccess == true) {
                 val joinCode = response.body()?.result ?: ""
                 Log.d("TeamRepository", "팀 참여 코드 조회 성공: $joinCode")
                 Result.success(joinCode)
             } else {
-                val errorMsg = response.body()?.message ?: "참여 코드 조회에 실패했습니다."
-                Log.e("TeamRepository", "참여 코드 조회 실패: $errorMsg")
-                Result.failure(Exception(errorMsg))
+                // 실패 시에도 팀 ID를 반환 (fallback)
+                Log.w("TeamRepository", "참여 코드 조회 실패, 팀 ID를 사용합니다")
+                Result.success(teamId)
             }
         } catch (e: Exception) {
-            Log.e("TeamRepository", "참여 코드 조회 오류", e)
-            Result.failure(e)
+            Log.e("TeamRepository", "참여 코드 조회 오류, 팀 ID를 사용합니다", e)
+            // 예외 발생 시에도 팀 ID를 반환
+            Result.success(teamId)
         }
     }
 }

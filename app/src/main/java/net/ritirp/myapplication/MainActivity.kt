@@ -48,7 +48,8 @@ import net.ritirp.myapplication.presentation.viewmodel.MapViewModelFactory
  */
 class MainActivity : ComponentActivity() {
     private val mapRepository by lazy {
-        MapRepository(LocationServices.getFusedLocationProviderClient(this))
+        // GlobalApplication의 MapRepository 사용 (싱글톤)
+        GlobalApplication.getMapRepository(this)
     }
 
     private val mapViewModel: MapViewModel by viewModels {
@@ -64,6 +65,7 @@ class MainActivity : ComponentActivity() {
             AppNavigation(
                 mapViewModel = mapViewModel,
                 loginViewModel = loginViewModel,
+                mapRepository = mapRepository,
             )
         }
     }
@@ -73,6 +75,7 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation(
     mapViewModel: MapViewModel,
     loginViewModel: LoginViewModel,
+    mapRepository: MapRepository,
 ) {
     val navController = rememberNavController()
     val authState by loginViewModel.authState.collectAsStateWithLifecycle()
@@ -183,13 +186,25 @@ fun AppNavigation(
         // 팀 관리 화면
         composable("team_management") {
             val teamRepository = GlobalApplication.getTeamRepository(context)
+            val drivingRepository = GlobalApplication.getDrivingRepository(context)
+            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
             val teamViewModel =
                 androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.TeamViewModel>(
-                    factory = net.ritirp.myapplication.presentation.viewmodel.TeamViewModelFactory(teamRepository),
+                    factory = net.ritirp.myapplication.presentation.viewmodel.TeamViewModelFactory(
+                        teamRepository,
+                        drivingRepository,
+                        fusedLocationClient,
+                        mapRepository
+                    ),
                 )
             net.ritirp.myapplication.presentation.screen.TeamManagementScreen(
                 viewModel = teamViewModel,
                 onNavigateBack = { navController.popBackStack() },
+                onNavigateToMap = {
+                    navController.navigate("main") {
+                        popUpTo("main") { inclusive = false }
+                    }
+                }
             )
         }
     }

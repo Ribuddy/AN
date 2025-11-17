@@ -1,5 +1,6 @@
 package net.ritirp.myapplication.presentation.screen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,6 +33,7 @@ import net.ritirp.myapplication.presentation.viewmodel.TeamViewModel
 fun TeamManagementScreen(
     viewModel: TeamViewModel,
     onNavigateBack: () -> Unit = {},
+    onNavigateToMap: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -62,6 +64,11 @@ fun TeamManagementScreen(
             onBack = { viewModel.clearSelectedTeam() },
             onGetJoinCode = { viewModel.getTeamJoinCode(uiState.selectedTeam!!.id) },
             snackbarHostState = snackbarHostState,
+            onStartRiding = { teamId -> viewModel.startRiding(teamId) },
+            onEndRiding = { viewModel.endRiding() },
+            ridingStatus = uiState.ridingStatus,
+            teamMemberLocations = uiState.teamMemberLocations,
+            onNavigateToMap = onNavigateToMap
         )
         return
     }
@@ -473,7 +480,12 @@ fun TeamDetailScreen(
     joinCode: String?,
     onBack: () -> Unit,
     onGetJoinCode: () -> Unit,
+    onStartRiding: (teamId: String) -> Unit,
+    onEndRiding: () -> Unit,
+    ridingStatus: net.ritirp.myapplication.data.model.RidingStatus,
+    teamMemberLocations: List<net.ritirp.myapplication.data.model.TeamMemberLocation>,
     snackbarHostState: SnackbarHostState,
+    onNavigateToMap: () -> Unit = {},
 ) {
     var showJoinCodeDialog by remember { mutableStateOf(false) }
 
@@ -544,6 +556,63 @@ fun TeamDetailScreen(
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
+                }
+            }
+
+            // 팀 라이딩 시작/종료 버튼
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = when (ridingStatus) {
+                        net.ritirp.myapplication.data.model.RidingStatus.RIDING -> Color(0xFF4CAF50)
+                        else -> MaterialTheme.colorScheme.primary
+                    }
+                )
+            ) {
+                Button(
+                    onClick = {
+                        when (ridingStatus) {
+                            net.ritirp.myapplication.data.model.RidingStatus.IDLE,
+                            net.ritirp.myapplication.data.model.RidingStatus.ENDED -> {
+                                onStartRiding(team.id)
+                                // 라이딩 시작하면 메인 화면(지도)으로 이동
+                                onNavigateToMap()
+                            }
+                            net.ritirp.myapplication.data.model.RidingStatus.RIDING -> {
+                                onEndRiding()
+                            }
+                            else -> {}
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = when (ridingStatus) {
+                            net.ritirp.myapplication.data.model.RidingStatus.RIDING -> Color(0xFFEF5350)
+                            else -> MaterialTheme.colorScheme.primary
+                        }
+                    )
+                ) {
+                    Icon(
+                        imageVector = when (ridingStatus) {
+                            net.ritirp.myapplication.data.model.RidingStatus.RIDING -> Icons.Default.Stop
+                            else -> Icons.Default.DirectionsBike
+                        },
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = when (ridingStatus) {
+                            net.ritirp.myapplication.data.model.RidingStatus.RIDING -> "팀 라이딩 종료"
+                            else -> "팀 라이딩 시작"
+                        },
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
@@ -781,4 +850,176 @@ fun TeamJoinCodeDialog(
             }
         },
     )
+}
+
+/**
+ * 팀 라이딩 지도 화면
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TeamRidingMapScreen(
+    teamName: String,
+    teamMemberLocations: List<net.ritirp.myapplication.data.model.TeamMemberLocation>,
+    onBack: () -> Unit,
+    onEndRiding: () -> Unit,
+    snackbarHostState: SnackbarHostState,
+) {
+    var showEndRidingDialog by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("${teamName} 팀 라이딩") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "뒤로가기")
+                    }
+                },
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { padding ->
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+        ) {
+            // 지도 영역 (임시로 배경색만 설정)
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .background(Color(0xFFECEFF1)),
+            ) {
+                // 실제 지도는 여기서 표시
+                // 현재는 팀원 위치를 표시하는 마커만 임시로 추가
+                teamMemberLocations.forEach { memberLocation ->
+                    // TODO: 실제 지도 위에 마커로 표시
+                    Text(
+                        text = "${memberLocation.memberName} (${memberLocation.distance}km)",
+                        modifier = Modifier.padding(8.dp),
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 팀원 위치 목록
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(teamMemberLocations) { memberLocation ->
+                    TeamMemberLocationCard(memberLocation)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 라이딩 종료 버튼
+            Button(
+                onClick = { showEndRidingDialog = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFEF5350),
+                )
+            ) {
+                Text(
+                    text = "라이딩 종료",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                )
+            }
+        }
+    }
+
+    // 라이딩 종료 확인 다이얼로그
+    if (showEndRidingDialog) {
+        AlertDialog(
+            onDismissRequest = { showEndRidingDialog = false },
+            title = { Text("라이딩 종료") },
+            text = { Text("정말로 라이딩을 종료하시겠습니까?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onEndRiding()
+                        showEndRidingDialog = false
+                    },
+                ) {
+                    Text("종료", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEndRidingDialog = false }) {
+                    Text("취소")
+                }
+            },
+        )
+    }
+}
+
+/**
+ * 팀원 위치 카드
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TeamMemberLocationCard(memberLocation: net.ritirp.myapplication.data.model.TeamMemberLocation) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // 프로필 아이콘
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
+
+            // 이름, 거리 및 상태
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = memberLocation.memberName ?: "이름 없음",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = "${memberLocation.distance} km",
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                )
+            }
+
+            // 라이딩 중 상태 아이콘
+            if (memberLocation.isRiding) {
+                Icon(
+                    imageVector = Icons.Default.DirectionsBike,
+                    contentDescription = "라이딩 중",
+                    tint = Color(0xFF4CAF50),
+                )
+            }
+        }
+    }
 }

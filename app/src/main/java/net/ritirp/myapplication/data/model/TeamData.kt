@@ -16,7 +16,7 @@ data class CreateTeamRequest(
 
 // 팀 참여/탈퇴 요청
 data class JoinOrLeaveTeamRequest(
-    @SerializedName("id") val id: String,
+    @SerializedName("code") val code: String,
 )
 
 // 팀 정보

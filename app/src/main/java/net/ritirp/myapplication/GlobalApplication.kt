@@ -2,6 +2,7 @@ package net.ritirp.myapplication
 
 import android.app.Application
 import android.content.Context
+import com.google.android.gms.location.LocationServices
 import com.kakao.vectormap.KakaoMapSdk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -13,8 +14,10 @@ import net.ritirp.myapplication.data.repository.AuthRepository
 import net.ritirp.myapplication.data.repository.CrashSettingsRepository
 import net.ritirp.myapplication.data.repository.FriendRepository
 import net.ritirp.myapplication.data.repository.TeamRepository
+import net.ritirp.myapplication.data.repository.MapRepository
 import net.ritirp.myapplication.service.AppVisibilityObserver
 import net.ritirp.myapplication.service.CrashDetector
+import net.ritirp.myapplication.service.LocationUpdateManager
 
 /**
  * Application 레벨 초기화.
@@ -37,6 +40,14 @@ class GlobalApplication : Application() {
     lateinit var authRepository: AuthRepository
         private set
 
+    lateinit var drivingRepository: net.ritirp.myapplication.data.repository.DrivingRepository
+        private set
+
+    lateinit var mapRepository: MapRepository
+        private set
+
+    private lateinit var locationUpdateManager: LocationUpdateManager
+
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onCreate() {
@@ -55,6 +66,23 @@ class GlobalApplication : Application() {
 
         // 인증 저장소 초기화
         authRepository = AuthRepository(this)
+
+        // 라이딩 저장소 초기화
+        drivingRepository = net.ritirp.myapplication.data.repository.DrivingRepository(
+            net.ritirp.myapplication.data.api.RetrofitClient.drivingApi,
+            this
+        )
+
+        // Map 저장소 초기화
+        mapRepository = MapRepository(LocationServices.getFusedLocationProviderClient(this))
+
+        // 위치 업데이트 매니저 초기화 (Application Scope에서 실행)
+        locationUpdateManager = LocationUpdateManager(
+            applicationScope,
+            LocationServices.getFusedLocationProviderClient(this),
+            drivingRepository,
+            mapRepository
+        )
 
         // 사고 감지기 초기화
         crashDetector = CrashDetector(this, SensitivityLevel.MEDIUM)
@@ -103,6 +131,14 @@ class GlobalApplication : Application() {
 
         fun getAuthRepository(context: Context): AuthRepository {
             return (context.applicationContext as GlobalApplication).authRepository
+        }
+
+        fun getDrivingRepository(context: Context): net.ritirp.myapplication.data.repository.DrivingRepository {
+            return (context.applicationContext as GlobalApplication).drivingRepository
+        }
+
+        fun getMapRepository(context: Context): MapRepository {
+            return (context.applicationContext as GlobalApplication).mapRepository
         }
     }
 }

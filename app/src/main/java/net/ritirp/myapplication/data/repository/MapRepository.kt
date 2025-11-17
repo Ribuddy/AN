@@ -32,6 +32,31 @@ class MapRepository(
     private val _markers = MutableStateFlow<List<MarkerData>>(emptyList())
     val markers: Flow<List<MarkerData>> = _markers.asStateFlow()
 
+    /**
+     * 팀원 위치를 마커로 업데이트
+     */
+    fun updateTeamMemberMarkers(teamMemberLocations: List<net.ritirp.myapplication.data.model.TeamMemberLocation>) {
+        val teamMarkers = teamMemberLocations.map { member ->
+            MarkerData(
+                id = "team_${member.userId}",
+                location = LocationData(member.lat, member.lon),
+                title = member.memberName,
+                emoji = "👤",
+                type = MarkerType.TEAM_MEMBER,
+            )
+        }
+        _markers.value = teamMarkers
+        println("DEBUG: Updated team markers: ${teamMarkers.size} members")
+    }
+
+    /**
+     * 팀 마커 초기화 (라이딩 종료 시)
+     */
+    fun clearTeamMarkers() {
+        _markers.value = emptyList()
+        println("DEBUG: Cleared team markers")
+    }
+
     @SuppressLint("MissingPermission")
     suspend fun getCurrentLocation(): LocationData =
         suspendCancellableCoroutine { continuation ->

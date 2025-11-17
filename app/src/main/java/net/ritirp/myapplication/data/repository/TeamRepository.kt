@@ -190,9 +190,12 @@ class TeamRepository(private val context: Context) {
             Log.d("TeamRepository", "팀 참여 코드 조회: teamId=$teamId")
             val response = teamApi.getTeamJoinCode("Bearer $token", teamId)
 
+            Log.d("TeamRepository", "응답 코드: ${response.code()}")
+            Log.d("TeamRepository", "응답 바디: ${response.body()}")
+
             if (response.isSuccessful && response.body()?.isSuccess == true) {
                 val joinCode = response.body()?.result ?: ""
-                Log.d("TeamRepository", "팀 참여 코드 조회 성공")
+                Log.d("TeamRepository", "팀 참여 코드 조회 성공: $joinCode")
                 Result.success(joinCode)
             } else {
                 val errorMsg = response.body()?.message ?: "참여 코드 조회에 실패했습니다."

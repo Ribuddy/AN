@@ -628,7 +628,7 @@ fun TeamMemberCard(member: net.ritirp.myapplication.data.model.TeamMember) {
             // 이름과 닉네임
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = member.name,
+                    text = member.name ?: "이름 없음",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -653,6 +653,18 @@ fun TeamJoinCodeDialog(
     joinCode: String?,
     onDismiss: () -> Unit
 ) {
+    var showTimeout by remember { mutableStateOf(false) }
+
+    // 5초 후에도 코드가 안 오면 타임아웃 메시지 표시
+    LaunchedEffect(joinCode) {
+        if (joinCode == null) {
+            kotlinx.coroutines.delay(5000)
+            if (joinCode == null) {
+                showTimeout = true
+            }
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -672,51 +684,82 @@ fun TeamJoinCodeDialog(
                     color = Color.Gray
                 )
 
-                if (joinCode != null) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                when {
+                    joinCode != null -> {
+                        // 참여 코드가 있을 때
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            )
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "팀 참여 코드",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                                Text(
-                                    text = joinCode,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "팀 참여 코드",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Text(
+                                        text = joinCode,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                                Icon(
+                                    Icons.Default.ContentCopy,
+                                    contentDescription = "복사",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
+                        }
+                        Text(
+                            text = "이 코드를 친구에게 공유하면 팀에 참여할 수 있습니다",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
+                    showTimeout -> {
+                        // 타임아웃 시
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             Icon(
-                                Icons.Default.ContentCopy,
-                                contentDescription = "복사",
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = Color(0xFFFF9800),
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Text(
+                                text = "참여 코드를 불러올 수 없습니다",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "팀 ID를 직접 공유하거나\n나중에 다시 시도해주세요",
+                                fontSize = 12.sp,
+                                color = Color.Gray,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
                         }
                     }
-                    Text(
-                        text = "이 코드를 친구에게 공유하면 팀에 참여할 수 있습니다",
-                        fontSize = 12.sp,
-                        color = Color.Gray
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
+                    else -> {
+                        // 로딩 중
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
                 }
             }

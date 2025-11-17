@@ -155,19 +155,19 @@ class TeamViewModel(
      */
     fun getTeamJoinCode(teamId: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(teamJoinCode = null) // 이전 코드 초기화
 
             teamRepository.getTeamJoinCode(teamId)
                 .onSuccess { joinCode ->
+                    android.util.Log.d("TeamViewModel", "참여 코드 받음: $joinCode")
                     _uiState.value = _uiState.value.copy(
-                        teamJoinCode = joinCode,
-                        isLoading = false
+                        teamJoinCode = joinCode
                     )
                 }
                 .onFailure { error ->
+                    android.util.Log.e("TeamViewModel", "참여 코드 조회 실패: ${error.message}")
                     _uiState.value = _uiState.value.copy(
-                        error = error.message ?: "참여 코드 조회에 실패했습니다.",
-                        isLoading = false
+                        error = error.message ?: "참여 코드 조회에 실패했습니다."
                     )
                 }
         }
@@ -191,7 +191,10 @@ class TeamViewModel(
      * 선택된 팀 초기화
      */
     fun clearSelectedTeam() {
-        _uiState.value = _uiState.value.copy(selectedTeam = null)
+        _uiState.value = _uiState.value.copy(
+            selectedTeam = null,
+            teamJoinCode = null  // 참여 코드도 함께 초기화
+        )
     }
 }
 

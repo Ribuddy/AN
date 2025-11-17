@@ -32,7 +32,7 @@ data class TeamInfo(
 // 팀 멤버 정보
 data class TeamMember(
     @SerializedName("id") val id: String,
-    @SerializedName("name") val name: String,
+    @SerializedName("name") val name: String? = null,
     @SerializedName("nickname") val nickname: String? = null,
     @SerializedName("profileImage") val profileImage: String? = null
 )

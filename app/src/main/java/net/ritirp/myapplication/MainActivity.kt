@@ -142,6 +142,9 @@ fun AppNavigation(
                 viewModel = mapViewModel,
                 onNavigateToCrashSettings = {
                     navController.navigate("crash_settings")
+                },
+                onNavigateToTeamManagement = {
+                    navController.navigate("team_management")
                 }
             )
         }
@@ -175,14 +178,27 @@ fun AppNavigation(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
+
+        // 팀 관리 화면
+        composable("team_management") {
+            val teamRepository = GlobalApplication.getTeamRepository(context)
+            val teamViewModel = androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.TeamViewModel>(
+                factory = net.ritirp.myapplication.presentation.viewmodel.TeamViewModelFactory(teamRepository)
+            )
+            net.ritirp.myapplication.presentation.screen.TeamManagementScreen(
+                viewModel = teamViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
     }
 }
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun MapApp(viewModel: MapViewModel, onNavigateToCrashSettings: () -> Unit = {}) {
+fun MapApp(viewModel: MapViewModel, onNavigateToCrashSettings: () -> Unit = {}, onNavigateToTeamManagement: () -> Unit = {}) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
+    val context = LocalContext.current  // context 추가
 
     // 권한 요청
     LaunchedEffect(Unit) {
@@ -219,9 +235,21 @@ fun MapApp(viewModel: MapViewModel, onNavigateToCrashSettings: () -> Unit = {}) 
                     modifier = Modifier.padding(paddingValues),
                 )
             }
+            BottomTab.FRIEND -> {
+                val friendRepository = GlobalApplication.getFriendRepository(context)
+                val authRepository = GlobalApplication.getAuthRepository(context)
+                val friendViewModel = androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.FriendViewModel>(
+                    factory = net.ritirp.myapplication.presentation.viewmodel.FriendViewModelFactory(friendRepository, authRepository)
+                )
+                net.ritirp.myapplication.presentation.screen.FriendScreen(
+                    viewModel = friendViewModel,
+                    modifier = Modifier.padding(paddingValues)
+                )
+            }
             BottomTab.MY -> {
                 net.ritirp.myapplication.presentation.screen.MyScreen(
                     onNavigateToCrashSettings = onNavigateToCrashSettings,
+                    onNavigateToTeamManagement = onNavigateToTeamManagement,
                     modifier = Modifier.padding(paddingValues)
                 )
             }

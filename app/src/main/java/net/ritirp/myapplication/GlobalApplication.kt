@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import net.ritirp.myapplication.data.model.SensitivityLevel
 import net.ritirp.myapplication.data.repository.CrashSettingsRepository
+import net.ritirp.myapplication.data.repository.TeamRepository
+import net.ritirp.myapplication.data.repository.FriendRepository
+import net.ritirp.myapplication.data.repository.AuthRepository
 import net.ritirp.myapplication.service.AppVisibilityObserver
 import net.ritirp.myapplication.service.CrashDetector
 
@@ -26,6 +29,15 @@ class GlobalApplication : Application() {
     lateinit var crashSettingsRepository: CrashSettingsRepository
         private set
 
+    lateinit var teamRepository: TeamRepository
+        private set
+
+    lateinit var friendRepository: FriendRepository
+        private set
+
+    lateinit var authRepository: AuthRepository
+        private set
+
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onCreate() {
@@ -35,6 +47,15 @@ class GlobalApplication : Application() {
 
         // 설정 저장소 초기화
         crashSettingsRepository = CrashSettingsRepository(this)
+
+        // 팀 저장소 초기화
+        teamRepository = TeamRepository(this)
+
+        // 친구 저장소 초기화
+        friendRepository = FriendRepository(this)
+
+        // 인증 저장소 초기화
+        authRepository = AuthRepository(this)
 
         // 사고 감지기 초기화
         crashDetector = CrashDetector(this, SensitivityLevel.MEDIUM)
@@ -71,6 +92,18 @@ class GlobalApplication : Application() {
 
         fun getCrashSettingsRepository(context: Context): CrashSettingsRepository {
             return (context.applicationContext as GlobalApplication).crashSettingsRepository
+        }
+
+        fun getTeamRepository(context: Context): TeamRepository {
+            return (context.applicationContext as GlobalApplication).teamRepository
+        }
+
+        fun getFriendRepository(context: Context): FriendRepository {
+            return (context.applicationContext as GlobalApplication).friendRepository
+        }
+
+        fun getAuthRepository(context: Context): AuthRepository {
+            return (context.applicationContext as GlobalApplication).authRepository
         }
     }
 }

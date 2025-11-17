@@ -2,31 +2,22 @@ package net.ritirp.myapplication.data.repository
 
 import android.content.Context
 import android.util.Log
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import net.ritirp.myapplication.data.api.RetrofitClient
+import net.ritirp.myapplication.data.local.DataStoreManager
 import net.ritirp.myapplication.data.model.LoginResponse
 import net.ritirp.myapplication.data.model.UserData
+import net.ritirp.myapplication.data.model.UserInfo
 
 /**
  * 인증 관련 Repository
  */
 class AuthRepository(private val context: Context) {
-    companion object {
-        private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "auth_prefs")
-        private val ACCESS_TOKEN_KEY = stringPreferencesKey("access_token")
-        private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
-        private val USER_ID_KEY = stringPreferencesKey("user_id")
-        private val USER_EMAIL_KEY = stringPreferencesKey("user_email")
-        private val USER_NAME_KEY = stringPreferencesKey("user_name")
-    }
-
     private val authApi = RetrofitClient.authApi
+    private val dataStore = DataStoreManager.getDataStore(context)
 
     /**
      * Google OAuth 콜백 처리
@@ -50,69 +41,91 @@ class AuthRepository(private val context: Context) {
                 val apiResponse = response.body()
                 Log.d("AuthRepository", "응답 Body: isSuccess=${apiResponse?.isSuccess}, message=${apiResponse?.message}")
 
-                if (apiResponse?.isSuccess == true && apiResponse.result != null) {
-                    // 성공: 토큰 저장
-                    Log.d("AuthRepository", "✅ 로그인 성공! JWT 토큰 저장 중...")
-                    saveTokens(apiResponse.result)
-                    Result.success(apiResponse.result)
+                if (apiResponse?.isSuccess == true) {
+                    val loginData = apiResponse.result
+                    if (loginData != null) {
+                        // 토큰 및 사용자 정보 저장
+                        saveTokens(loginData.accessToken, loginData.refreshToken ?: "")
+                        saveUserData(
+                            loginData.userId,
+                            loginData.email ?: "",
+                            loginData.name ?: "",
+                            loginData.ribuddyId ?: ""
+                        )
+                        Log.d("AuthRepository", "로그인 성공 및 토큰 저장 완료")
+                        Result.success(loginData)
+                    } else {
+                        Log.e("AuthRepository", "로그인 데이터가 null입니다.")
+                        Result.failure(Exception("로그인 데이터를 받지 못했습니다."))
+                    }
                 } else {
-                    // API 응답은 받았지만 비즈니스 로직 실패
-                    val errorMessage = apiResponse?.message ?: "로그인에 실패했습니다."
-                    Log.e("AuthRepository", "❌ 비즈니스 로직 실패: $errorMessage")
-                    Result.failure(Exception(errorMessage))
+                    val errorMsg = apiResponse?.message ?: "알 수 없는 오류"
+                    Log.e("AuthRepository", "서버 응답 실패: $errorMsg")
+                    Result.failure(Exception(errorMsg))
                 }
             } else {
-                // HTTP 에러
-                val errorBody = response.errorBody()?.string()
-                Log.e("AuthRepository", "❌ HTTP 에러: ${response.code()}")
-                Log.e("AuthRepository", "에러 Body: $errorBody")
-                Result.failure(Exception("서버 오류: ${response.code()}"))
+                val errorMsg = "서버 오류: ${response.code()}"
+                Log.e("AuthRepository", errorMsg)
+                Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
-            Log.e("AuthRepository", "❌ 예외 발생: ${e.message}", e)
+            Log.e("AuthRepository", "네트워크 오류", e)
             Result.failure(e)
         }
     }
 
     /**
-     * 토큰 및 사용자 정보 저장
+     * 토큰 저장
      */
-    private suspend fun saveTokens(loginResponse: LoginResponse) {
-        context.dataStore.edit { preferences ->
-            preferences[ACCESS_TOKEN_KEY] = loginResponse.accessToken
-            loginResponse.refreshToken?.let {
-                preferences[REFRESH_TOKEN_KEY] = it
-            }
-            preferences[USER_ID_KEY] = loginResponse.userId
-            loginResponse.email?.let {
-                preferences[USER_EMAIL_KEY] = it
-            }
-            loginResponse.name?.let {
-                preferences[USER_NAME_KEY] = it
-            }
+    private suspend fun saveTokens(accessToken: String, refreshToken: String) {
+        dataStore.edit { preferences ->
+            preferences[DataStoreManager.ACCESS_TOKEN_KEY] = accessToken
+            preferences[DataStoreManager.REFRESH_TOKEN_KEY] = refreshToken
         }
     }
 
     /**
-     * 저장된 Access Token 가져오기
+     * 사용자 정보 저장
+     */
+    private suspend fun saveUserData(userId: String, email: String, name: String, ribuddyId: String) {
+        dataStore.edit { preferences ->
+            preferences[DataStoreManager.USER_ID_KEY] = userId
+            preferences[DataStoreManager.USER_EMAIL_KEY] = email
+            preferences[DataStoreManager.USER_NAME_KEY] = name
+            preferences[DataStoreManager.RIBUDDY_ID_KEY] = ribuddyId
+        }
+    }
+
+    /**
+     * 액세스 토큰 조회
      */
     fun getAccessToken(): Flow<String?> {
-        return context.dataStore.data.map { preferences ->
-            preferences[ACCESS_TOKEN_KEY]
+        return dataStore.data.map { preferences ->
+            preferences[DataStoreManager.ACCESS_TOKEN_KEY]
         }
     }
 
     /**
-     * 저장된 사용자 정보 가져오기
+     * 리프레시 토큰 조회
+     */
+    fun getRefreshToken(): Flow<String?> {
+        return dataStore.data.map { preferences ->
+            preferences[DataStoreManager.REFRESH_TOKEN_KEY]
+        }
+    }
+
+    /**
+     * 사용자 정보 조회
      */
     fun getUserData(): Flow<UserData?> {
-        return context.dataStore.data.map { preferences ->
-            val userId = preferences[USER_ID_KEY]
-            val email = preferences[USER_EMAIL_KEY]
-            val name = preferences[USER_NAME_KEY]
+        return dataStore.data.map { preferences ->
+            val userId = preferences[DataStoreManager.USER_ID_KEY]
+            val email = preferences[DataStoreManager.USER_EMAIL_KEY]
+            val name = preferences[DataStoreManager.USER_NAME_KEY]
+            val ribuddyId = preferences[DataStoreManager.RIBUDDY_ID_KEY]
 
-            if (userId != null && email != null && name != null) {
-                UserData(userId, email, name)
+            if (userId != null) {
+                UserData(userId, email, name, ribuddyId = ribuddyId)
             } else {
                 null
             }
@@ -120,21 +133,49 @@ class AuthRepository(private val context: Context) {
     }
 
     /**
-     * 로그인 상태 확인
+     * 서버에서 내 정보 조회 (최신 정보)
      */
-    suspend fun isLoggedIn(): Boolean {
-        var isLogged = false
-        context.dataStore.data.map { preferences ->
-            isLogged = preferences[ACCESS_TOKEN_KEY] != null
+    suspend fun fetchMyInfo(): Result<UserInfo> {
+        return try {
+            val token = dataStore.data.first()[DataStoreManager.ACCESS_TOKEN_KEY]
+            if (token.isNullOrEmpty()) {
+                return Result.failure(Exception("로그인이 필요합니다."))
+            }
+
+            Log.d("AuthRepository", "내 정보 조회 요청")
+            val response = authApi.getMyInfo("Bearer $token")
+
+            if (response.isSuccessful && response.body()?.isSuccess == true) {
+                val userInfo = response.body()?.result
+                if (userInfo != null) {
+                    // DataStore에도 최신 정보 저장
+                    saveUserData(
+                        userInfo.id,
+                        "",  // email은 API에 없음
+                        userInfo.name,
+                        userInfo.ribuddyId
+                    )
+                    Log.d("AuthRepository", "내 정보 조회 성공: ${userInfo.ribuddyId}")
+                    Result.success(userInfo)
+                } else {
+                    Result.failure(Exception("사용자 정보를 받지 못했습니다."))
+                }
+            } else {
+                val errorMsg = response.body()?.message ?: "사용자 정보 조회에 실패했습니다."
+                Log.e("AuthRepository", "내 정보 조회 실패: $errorMsg")
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Log.e("AuthRepository", "내 정보 조회 오류", e)
+            Result.failure(e)
         }
-        return isLogged
     }
 
     /**
      * 로그아웃 (토큰 삭제)
      */
     suspend fun logout() {
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences.clear()
         }
     }

@@ -14,9 +14,8 @@ import net.ritirp.myapplication.data.repository.CrashSettingsRepository
  * 사고 감지 설정 ViewModel
  */
 class CrashSettingsViewModel(
-    private val repository: CrashSettingsRepository
+    private val repository: CrashSettingsRepository,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(CrashSettingsUiState())
     val uiState: StateFlow<CrashSettingsUiState> = _uiState.asStateFlow()
 
@@ -53,11 +52,11 @@ class CrashSettingsViewModel(
 
 data class CrashSettingsUiState(
     val sensitivityLevel: SensitivityLevel = SensitivityLevel.MEDIUM,
-    val isDetectionEnabled: Boolean = true
+    val isDetectionEnabled: Boolean = true,
 )
 
 class CrashSettingsViewModelFactory(
-    private val repository: CrashSettingsRepository
+    private val repository: CrashSettingsRepository,
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CrashSettingsViewModel::class.java)) {

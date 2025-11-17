@@ -9,17 +9,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import net.ritirp.myapplication.data.model.FriendInfo
-import net.ritirp.myapplication.data.repository.FriendRepository
 import net.ritirp.myapplication.data.repository.AuthRepository
+import net.ritirp.myapplication.data.repository.FriendRepository
 
 /**
  * 친구 관리 ViewModel
  */
 class FriendViewModel(
     private val friendRepository: FriendRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(FriendUiState())
     val uiState: StateFlow<FriendUiState> = _uiState.asStateFlow()
 
@@ -36,18 +35,20 @@ class FriendViewModel(
             // 서버에서 최신 정보 가져오기
             authRepository.fetchMyInfo()
                 .onSuccess { userInfo ->
-                    _uiState.value = _uiState.value.copy(
-                        myRibuddyId = userInfo.ribuddyId,
-                        myName = userInfo.name
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            myRibuddyId = userInfo.ribuddyId,
+                            myName = userInfo.name,
+                        )
                 }
                 .onFailure { error ->
                     // 실패 시 로컬 저장소에서 가져오기
                     authRepository.getUserData().first()?.let { userData ->
-                        _uiState.value = _uiState.value.copy(
-                            myRibuddyId = userData.ribuddyId,
-                            myName = userData.name
-                        )
+                        _uiState.value =
+                            _uiState.value.copy(
+                                myRibuddyId = userData.ribuddyId,
+                                myName = userData.name,
+                            )
                     }
                 }
         }
@@ -62,17 +63,19 @@ class FriendViewModel(
 
             friendRepository.getFriendList()
                 .onSuccess { friendList ->
-                    _uiState.value = _uiState.value.copy(
-                        favorites = friendList.favorites,
-                        friends = friendList.friends,
-                        isLoading = false
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            favorites = friendList.favorites,
+                            friends = friendList.friends,
+                            isLoading = false,
+                        )
                 }
                 .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        error = error.message ?: "친구 목록을 불러오는데 실패했습니다.",
-                        isLoading = false
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            error = error.message ?: "친구 목록을 불러오는데 실패했습니다.",
+                            isLoading = false,
+                        )
                 }
         }
     }
@@ -86,18 +89,20 @@ class FriendViewModel(
 
             friendRepository.addFriendByRibuddyId(ribuddyId)
                 .onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        successMessage = "친구가 추가되었습니다."
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isLoading = false,
+                            successMessage = "친구가 추가되었습니다.",
+                        )
                     // 친구 목록 새로고침
                     loadFriendList()
                 }
                 .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        error = error.message ?: "친구 추가에 실패했습니다.",
-                        isLoading = false
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            error = error.message ?: "친구 추가에 실패했습니다.",
+                            isLoading = false,
+                        )
                 }
         }
     }
@@ -111,18 +116,20 @@ class FriendViewModel(
 
             friendRepository.deleteFriend(friendUserId)
                 .onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        successMessage = "친구가 삭제되었습니다."
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isLoading = false,
+                            successMessage = "친구가 삭제되었습니다.",
+                        )
                     // 친구 목록 새로고침
                     loadFriendList()
                 }
                 .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        error = error.message ?: "친구 삭제에 실패했습니다.",
-                        isLoading = false
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            error = error.message ?: "친구 삭제에 실패했습니다.",
+                            isLoading = false,
+                        )
                 }
         }
     }
@@ -130,7 +137,10 @@ class FriendViewModel(
     /**
      * 즐겨찾기 토글
      */
-    fun toggleFavorite(friendUserId: String, currentIsFavorite: Boolean) {
+    fun toggleFavorite(
+        friendUserId: String,
+        currentIsFavorite: Boolean,
+    ) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(error = null)
 
@@ -140,9 +150,10 @@ class FriendViewModel(
                     loadFriendList()
                 }
                 .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        error = error.message ?: "즐겨찾기 변경에 실패했습니다."
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            error = error.message ?: "즐겨찾기 변경에 실패했습니다.",
+                        )
                 }
         }
     }
@@ -180,31 +191,33 @@ data class FriendUiState(
     val error: String? = null,
     val successMessage: String? = null,
     val myRibuddyId: String? = null,
-    val myName: String? = null
+    val myName: String? = null,
 ) {
     // 검색 필터링된 즐겨찾기
     val filteredFavorites: List<FriendInfo>
-        get() = if (searchQuery.isBlank()) {
-            favorites
-        } else {
-            favorites.filter {
-                it.name.contains(searchQuery, ignoreCase = true) ||
-                it.ribuddyId.contains(searchQuery, ignoreCase = true) ||
-                it.nickname?.contains(searchQuery, ignoreCase = true) == true
+        get() =
+            if (searchQuery.isBlank()) {
+                favorites
+            } else {
+                favorites.filter {
+                    it.name.contains(searchQuery, ignoreCase = true) ||
+                        it.ribuddyId.contains(searchQuery, ignoreCase = true) ||
+                        it.nickname?.contains(searchQuery, ignoreCase = true) == true
+                }
             }
-        }
 
     // 검색 필터링된 친구
     val filteredFriends: List<FriendInfo>
-        get() = if (searchQuery.isBlank()) {
-            friends
-        } else {
-            friends.filter {
-                it.name.contains(searchQuery, ignoreCase = true) ||
-                it.ribuddyId.contains(searchQuery, ignoreCase = true) ||
-                it.nickname?.contains(searchQuery, ignoreCase = true) == true
+        get() =
+            if (searchQuery.isBlank()) {
+                friends
+            } else {
+                friends.filter {
+                    it.name.contains(searchQuery, ignoreCase = true) ||
+                        it.ribuddyId.contains(searchQuery, ignoreCase = true) ||
+                        it.nickname?.contains(searchQuery, ignoreCase = true) == true
+                }
             }
-        }
 }
 
 /**
@@ -212,7 +225,7 @@ data class FriendUiState(
  */
 class FriendViewModelFactory(
     private val friendRepository: FriendRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

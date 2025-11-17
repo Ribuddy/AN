@@ -35,7 +35,7 @@ class FriendRepository(private val context: Context) {
             val response = friendApi.getFriendList("Bearer $token")
 
             if (response.isSuccessful && response.body()?.isSuccess == true) {
-                val friendList = response.body()?.result ?: emptyList()  // result가 직접 List
+                val friendList = response.body()?.result ?: emptyList() // result가 직접 List
                 // 즐겨찾기와 일반 친구로 분리
                 val favorites = friendList.filter { it.isFavorite }
                 val friends = friendList.filter { !it.isFavorite }
@@ -112,17 +112,21 @@ class FriendRepository(private val context: Context) {
     /**
      * 친구 즐겨찾기 설정/해제
      */
-    suspend fun toggleFavorite(friendUserId: String, isFavorite: Boolean): Result<Unit> {
+    suspend fun toggleFavorite(
+        friendUserId: String,
+        isFavorite: Boolean,
+    ): Result<Unit> {
         return try {
             val token = getAccessToken()
             if (token.isNullOrEmpty()) {
                 return Result.failure(Exception("로그인이 필요합니다."))
             }
 
-            val request = EditFriendStatusRequest(
-                toUserId = friendUserId,
-                isFavorite = isFavorite
-            )
+            val request =
+                EditFriendStatusRequest(
+                    toUserId = friendUserId,
+                    isFavorite = isFavorite,
+                )
             Log.d("FriendRepository", "친구 즐겨찾기 변경: userId=$friendUserId, isFavorite=$isFavorite")
             val response = friendApi.editFriendStatus("Bearer $token", request)
 

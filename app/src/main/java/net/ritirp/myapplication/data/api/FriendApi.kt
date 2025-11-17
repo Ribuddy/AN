@@ -14,7 +14,7 @@ interface FriendApi {
     @POST("v1/users/friend")
     suspend fun addFriendByRibuddyId(
         @Header("Authorization") token: String,
-        @Body request: AddFriendByRibuddyIdRequest
+        @Body request: AddFriendByRibuddyIdRequest,
     ): Response<ApiResponse<Unit>>
 
     /**
@@ -23,7 +23,7 @@ interface FriendApi {
     @HTTP(method = "DELETE", path = "v1/users/friend", hasBody = true)
     suspend fun deleteFriend(
         @Header("Authorization") token: String,
-        @Body request: DeleteFriendRequest
+        @Body request: DeleteFriendRequest,
     ): Response<ApiResponse<Unit>>
 
     /**
@@ -32,7 +32,7 @@ interface FriendApi {
     @PATCH("v1/users/friend")
     suspend fun editFriendStatus(
         @Header("Authorization") token: String,
-        @Body request: EditFriendStatusRequest
+        @Body request: EditFriendStatusRequest,
     ): Response<ApiResponse<Unit>>
 
     /**
@@ -40,6 +40,6 @@ interface FriendApi {
      */
     @GET("v1/users/friend/list")
     suspend fun getFriendList(
-        @Header("Authorization") token: String
-    ): Response<ApiResponse<List<FriendInfo>>>  // List로 직접 반환
+        @Header("Authorization") token: String,
+    ): Response<ApiResponse<List<FriendInfo>>> // List로 직접 반환
 }

@@ -40,7 +40,7 @@ data class UserInfo(
     @SerializedName("nickname") val nickname: String? = null,
     @SerializedName("oneLineIntroduction") val oneLineIntroduction: String? = null,
     @SerializedName("ribuddyId") val ribuddyId: String,
-    @SerializedName("profileImage") val profileImage: String? = null
+    @SerializedName("profileImage") val profileImage: String? = null,
 )
 
 // 인증 상태

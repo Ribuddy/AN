@@ -14,26 +14,27 @@ private val Context.crashSettingsDataStore by preferencesDataStore(name = "crash
  * 사고 감지 설정 저장소
  */
 class CrashSettingsRepository(private val context: Context) {
-
     companion object {
         private val SENSITIVITY_KEY = stringPreferencesKey("sensitivity_level")
         private val DETECTION_ENABLED_KEY = stringPreferencesKey("detection_enabled")
     }
 
-    val sensitivityLevel: Flow<SensitivityLevel> = context.crashSettingsDataStore.data
-        .map { preferences ->
-            val levelName = preferences[SENSITIVITY_KEY] ?: SensitivityLevel.MEDIUM.name
-            try {
-                SensitivityLevel.valueOf(levelName)
-            } catch (e: IllegalArgumentException) {
-                SensitivityLevel.MEDIUM
+    val sensitivityLevel: Flow<SensitivityLevel> =
+        context.crashSettingsDataStore.data
+            .map { preferences ->
+                val levelName = preferences[SENSITIVITY_KEY] ?: SensitivityLevel.MEDIUM.name
+                try {
+                    SensitivityLevel.valueOf(levelName)
+                } catch (e: IllegalArgumentException) {
+                    SensitivityLevel.MEDIUM
+                }
             }
-        }
 
-    val isDetectionEnabled: Flow<Boolean> = context.crashSettingsDataStore.data
-        .map { preferences ->
-            preferences[DETECTION_ENABLED_KEY]?.toBoolean() ?: true
-        }
+    val isDetectionEnabled: Flow<Boolean> =
+        context.crashSettingsDataStore.data
+            .map { preferences ->
+                preferences[DETECTION_ENABLED_KEY]?.toBoolean() ?: true
+            }
 
     suspend fun setSensitivityLevel(level: SensitivityLevel) {
         context.crashSettingsDataStore.edit { preferences ->

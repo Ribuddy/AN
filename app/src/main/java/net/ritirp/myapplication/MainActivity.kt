@@ -145,7 +145,7 @@ fun AppNavigation(
                 },
                 onNavigateToTeamManagement = {
                     navController.navigate("team_management")
-                }
+                },
             )
         }
 
@@ -162,7 +162,7 @@ fun AppNavigation(
                     onCancel = {
                         Log.d("AppNavigation", "User is OK, dismissing alert")
                         navController.popBackStack()
-                    }
+                    },
                 )
             }
         }
@@ -170,24 +170,26 @@ fun AppNavigation(
         // 사고 감지 설정 화면
         composable("crash_settings") {
             val crashSettingsRepository = GlobalApplication.getCrashSettingsRepository(context)
-            val crashSettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.CrashSettingsViewModel>(
-                factory = net.ritirp.myapplication.presentation.viewmodel.CrashSettingsViewModelFactory(crashSettingsRepository)
-            )
+            val crashSettingsViewModel =
+                androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.CrashSettingsViewModel>(
+                    factory = net.ritirp.myapplication.presentation.viewmodel.CrashSettingsViewModelFactory(crashSettingsRepository),
+                )
             net.ritirp.myapplication.presentation.screen.CrashSettingsScreen(
                 viewModel = crashSettingsViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
             )
         }
 
         // 팀 관리 화면
         composable("team_management") {
             val teamRepository = GlobalApplication.getTeamRepository(context)
-            val teamViewModel = androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.TeamViewModel>(
-                factory = net.ritirp.myapplication.presentation.viewmodel.TeamViewModelFactory(teamRepository)
-            )
+            val teamViewModel =
+                androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.TeamViewModel>(
+                    factory = net.ritirp.myapplication.presentation.viewmodel.TeamViewModelFactory(teamRepository),
+                )
             net.ritirp.myapplication.presentation.screen.TeamManagementScreen(
                 viewModel = teamViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
             )
         }
     }
@@ -195,10 +197,14 @@ fun AppNavigation(
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun MapApp(viewModel: MapViewModel, onNavigateToCrashSettings: () -> Unit = {}, onNavigateToTeamManagement: () -> Unit = {}) {
+fun MapApp(
+    viewModel: MapViewModel,
+    onNavigateToCrashSettings: () -> Unit = {},
+    onNavigateToTeamManagement: () -> Unit = {},
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
-    val context = LocalContext.current  // context 추가
+    val context = LocalContext.current // context 추가
 
     // 권한 요청
     LaunchedEffect(Unit) {
@@ -238,19 +244,20 @@ fun MapApp(viewModel: MapViewModel, onNavigateToCrashSettings: () -> Unit = {}, 
             BottomTab.FRIEND -> {
                 val friendRepository = GlobalApplication.getFriendRepository(context)
                 val authRepository = GlobalApplication.getAuthRepository(context)
-                val friendViewModel = androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.FriendViewModel>(
-                    factory = net.ritirp.myapplication.presentation.viewmodel.FriendViewModelFactory(friendRepository, authRepository)
-                )
+                val friendViewModel =
+                    androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.FriendViewModel>(
+                        factory = net.ritirp.myapplication.presentation.viewmodel.FriendViewModelFactory(friendRepository, authRepository),
+                    )
                 net.ritirp.myapplication.presentation.screen.FriendScreen(
                     viewModel = friendViewModel,
-                    modifier = Modifier.padding(paddingValues)
+                    modifier = Modifier.padding(paddingValues),
                 )
             }
             BottomTab.MY -> {
                 net.ritirp.myapplication.presentation.screen.MyScreen(
                     onNavigateToCrashSettings = onNavigateToCrashSettings,
                     onNavigateToTeamManagement = onNavigateToTeamManagement,
-                    modifier = Modifier.padding(paddingValues)
+                    modifier = Modifier.padding(paddingValues),
                 )
             }
             else -> {

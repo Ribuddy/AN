@@ -50,7 +50,7 @@ class AuthRepository(private val context: Context) {
                             loginData.userId,
                             loginData.email ?: "",
                             loginData.name ?: "",
-                            loginData.ribuddyId ?: ""
+                            loginData.ribuddyId ?: "",
                         )
                         Log.d("AuthRepository", "로그인 성공 및 토큰 저장 완료")
                         Result.success(loginData)
@@ -77,7 +77,10 @@ class AuthRepository(private val context: Context) {
     /**
      * 토큰 저장
      */
-    private suspend fun saveTokens(accessToken: String, refreshToken: String) {
+    private suspend fun saveTokens(
+        accessToken: String,
+        refreshToken: String,
+    ) {
         dataStore.edit { preferences ->
             preferences[DataStoreManager.ACCESS_TOKEN_KEY] = accessToken
             preferences[DataStoreManager.REFRESH_TOKEN_KEY] = refreshToken
@@ -87,7 +90,12 @@ class AuthRepository(private val context: Context) {
     /**
      * 사용자 정보 저장
      */
-    private suspend fun saveUserData(userId: String, email: String, name: String, ribuddyId: String) {
+    private suspend fun saveUserData(
+        userId: String,
+        email: String,
+        name: String,
+        ribuddyId: String,
+    ) {
         dataStore.edit { preferences ->
             preferences[DataStoreManager.USER_ID_KEY] = userId
             preferences[DataStoreManager.USER_EMAIL_KEY] = email
@@ -151,9 +159,9 @@ class AuthRepository(private val context: Context) {
                     // DataStore에도 최신 정보 저장
                     saveUserData(
                         userInfo.id,
-                        "",  // email은 API에 없음
+                        "", // email은 API에 없음
                         userInfo.name,
-                        userInfo.ribuddyId
+                        userInfo.ribuddyId,
                     )
                     Log.d("AuthRepository", "내 정보 조회 성공: ${userInfo.ribuddyId}")
                     Result.success(userInfo)

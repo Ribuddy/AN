@@ -1,6 +1,5 @@
 package net.ritirp.myapplication.presentation.screen
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,7 +27,7 @@ import net.ritirp.myapplication.presentation.viewmodel.FriendViewModel
 @Composable
 fun FriendScreen(
     viewModel: FriendViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
@@ -60,7 +59,7 @@ fun FriendScreen(
                     Text(
                         "버디",
                         fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 },
                 actions = {
@@ -70,26 +69,27 @@ fun FriendScreen(
                     IconButton(onClick = { viewModel.loadFriendList() }) {
                         Icon(Icons.Default.Refresh, "새로고침")
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
         ) {
             // 검색창
             SearchBar(
                 searchQuery = uiState.searchQuery,
                 onSearchQueryChange = viewModel::updateSearchQuery,
-                onAddClick = { showAddDialog = true }
+                onAddClick = { showAddDialog = true },
             )
 
             if (uiState.isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator()
                 }
@@ -97,7 +97,7 @@ fun FriendScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     // 즐겨찾기 섹션
                     if (uiState.filteredFavorites.isNotEmpty()) {
@@ -108,7 +108,7 @@ fun FriendScreen(
                             FriendCard(
                                 friend = friend,
                                 onToggleFavorite = { viewModel.toggleFavorite(friend.userId, friend.isFavorite) },
-                                onDelete = { viewModel.deleteFriend(friend.userId) }
+                                onDelete = { viewModel.deleteFriend(friend.userId) },
                             )
                         }
                     }
@@ -128,7 +128,7 @@ fun FriendScreen(
                             FriendCard(
                                 friend = friend,
                                 onToggleFavorite = { viewModel.toggleFavorite(friend.userId, friend.isFavorite) },
-                                onDelete = { viewModel.deleteFriend(friend.userId) }
+                                onDelete = { viewModel.deleteFriend(friend.userId) },
                             )
                         }
                     }
@@ -137,7 +137,7 @@ fun FriendScreen(
                     if (uiState.filteredFavorites.isEmpty() && uiState.filteredFriends.isEmpty() && !uiState.isLoading) {
                         item {
                             EmptyFriendView(
-                                onAddClick = { showAddDialog = true }
+                                onAddClick = { showAddDialog = true },
                             )
                         }
                     }
@@ -152,7 +152,7 @@ fun FriendScreen(
                 onConfirm = { ribuddyId ->
                     viewModel.addFriend(ribuddyId)
                     showAddDialog = false
-                }
+                },
             )
         }
 
@@ -160,7 +160,7 @@ fun FriendScreen(
         if (showMyRibuddyIdDialog) {
             MyRibuddyIdDialog(
                 onDismiss = { showMyRibuddyIdDialog = false },
-                ribuddyId = uiState.myRibuddyId
+                ribuddyId = uiState.myRibuddyId,
             )
         }
     }
@@ -174,14 +174,15 @@ fun FriendScreen(
 fun SearchBar(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    onAddClick: () -> Unit
+    onAddClick: () -> Unit,
 ) {
     OutlinedTextField(
         value = searchQuery,
         onValueChange = onSearchQueryChange,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
         placeholder = { Text("이름, 아이디 검색") },
         leadingIcon = {
             Icon(Icons.Default.Search, contentDescription = null)
@@ -192,7 +193,7 @@ fun SearchBar(
             }
         },
         shape = RoundedCornerShape(12.dp),
-        singleLine = true
+        singleLine = true,
     )
 }
 
@@ -206,7 +207,7 @@ fun SectionHeader(title: String) {
         fontSize = 16.sp,
         fontWeight = FontWeight.Bold,
         color = Color.Gray,
-        modifier = Modifier.padding(vertical = 4.dp)
+        modifier = Modifier.padding(vertical = 4.dp),
     )
 }
 
@@ -217,39 +218,41 @@ fun SectionHeader(title: String) {
 fun FriendCard(
     friend: FriendInfo,
     onToggleFavorite: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) {
                 // 프로필 아이콘
                 Surface(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape),
-                    color = MaterialTheme.colorScheme.primaryContainer
+                    modifier =
+                        Modifier
+                            .size(40.dp)
+                            .clip(CircleShape),
+                    color = MaterialTheme.colorScheme.primaryContainer,
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             Icons.Default.Person,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
                 }
@@ -259,13 +262,13 @@ fun FriendCard(
                     Text(
                         text = friend.name,
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                     friend.nickname?.let { nickname ->
                         Text(
                             text = nickname,
                             fontSize = 12.sp,
-                            color = Color.Gray
+                            color = Color.Gray,
                         )
                     }
                 }
@@ -273,20 +276,20 @@ fun FriendCard(
 
             // 즐겨찾기 & 삭제 버튼
             Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 IconButton(onClick = onToggleFavorite) {
                     Icon(
                         if (friend.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
                         contentDescription = "즐겨찾기",
-                        tint = if (friend.isFavorite) Color(0xFFFFD700) else Color.Gray
+                        tint = if (friend.isFavorite) Color(0xFFFFD700) else Color.Gray,
                     )
                 }
                 IconButton(onClick = { showDeleteDialog = true }) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = "삭제",
-                        tint = Color.Red
+                        tint = Color.Red,
                     )
                 }
             }
@@ -304,7 +307,7 @@ fun FriendCard(
                     onClick = {
                         onDelete()
                         showDeleteDialog = false
-                    }
+                    },
                 ) {
                     Text("삭제", color = Color.Red)
                 }
@@ -313,7 +316,7 @@ fun FriendCard(
                 TextButton(onClick = { showDeleteDialog = false }) {
                     Text("취소")
                 }
-            }
+            },
         )
     }
 }
@@ -322,34 +325,33 @@ fun FriendCard(
  * 빈 친구 목록 뷰
  */
 @Composable
-fun EmptyFriendView(
-    onAddClick: () -> Unit
-) {
+fun EmptyFriendView(onAddClick: () -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(32.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Icon(
             imageVector = Icons.Default.PersonAdd,
             contentDescription = null,
             modifier = Modifier.size(80.dp),
-            tint = Color.Gray
+            tint = Color.Gray,
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "친구가 없습니다",
             fontSize = 18.sp,
             fontWeight = FontWeight.Medium,
-            color = Color.Gray
+            color = Color.Gray,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "라이버디 ID로 친구를 추가해보세요",
             fontSize = 14.sp,
-            color = Color.Gray
+            color = Color.Gray,
         )
         Spacer(modifier = Modifier.height(24.dp))
         Button(onClick = onAddClick) {
@@ -367,7 +369,7 @@ fun EmptyFriendView(
 @Composable
 fun AddFriendDialog(
     onDismiss: () -> Unit,
-    onConfirm: (ribuddyId: String) -> Unit
+    onConfirm: (ribuddyId: String) -> Unit,
 ) {
     var ribuddyId by remember { mutableStateOf("") }
 
@@ -376,12 +378,12 @@ fun AddFriendDialog(
         title = { Text("친구 추가") },
         text = {
             Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
                     text = "추가할 친구의 라이버디 ID를 입력하세요",
                     fontSize = 14.sp,
-                    color = Color.Gray
+                    color = Color.Gray,
                 )
                 OutlinedTextField(
                     value = ribuddyId,
@@ -389,7 +391,7 @@ fun AddFriendDialog(
                     label = { Text("라이버디 ID") },
                     placeholder = { Text("예: ribuddy_official") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
@@ -400,7 +402,7 @@ fun AddFriendDialog(
                         onConfirm(ribuddyId.trim())
                     }
                 },
-                enabled = ribuddyId.isNotBlank()
+                enabled = ribuddyId.isNotBlank(),
             ) {
                 Text("추가")
             }
@@ -409,7 +411,7 @@ fun AddFriendDialog(
             TextButton(onClick = onDismiss) {
                 Text("취소")
             }
-        }
+        },
     )
 }
 
@@ -420,45 +422,46 @@ fun AddFriendDialog(
 @Composable
 fun MyRibuddyIdDialog(
     onDismiss: () -> Unit,
-    ribuddyId: String?
+    ribuddyId: String?,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("내 라이버디 ID") },
         text = {
             Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (ribuddyId != null) {
                     Text(
                         text = "내 라이버디 ID는 다음과 같습니다:",
                         fontSize = 14.sp,
-                        color = Color.Gray
+                        color = Color.Gray,
                     )
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        )
+                        colors =
+                            CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            ),
                     ) {
                         Text(
                             text = ribuddyId,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier.padding(16.dp),
                         )
                     }
                     Text(
                         text = "친구에게 이 ID를 공유하여 친구 추가를 요청하세요",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = Color.Gray,
                     )
                 } else {
                     Text(
                         text = "라이버디 ID를 불러올 수 없습니다",
                         fontSize = 14.sp,
-                        color = Color.Gray
+                        color = Color.Gray,
                     )
                 }
             }
@@ -467,6 +470,6 @@ fun MyRibuddyIdDialog(
             TextButton(onClick = onDismiss) {
                 Text("확인")
             }
-        }
+        },
     )
 }

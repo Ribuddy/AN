@@ -33,6 +33,6 @@ interface AuthApi {
      */
     @GET("v1/users/me")
     suspend fun getMyInfo(
-        @Header("Authorization") token: String
+        @Header("Authorization") token: String,
     ): Response<ApiResponse<UserInfo>>
 }

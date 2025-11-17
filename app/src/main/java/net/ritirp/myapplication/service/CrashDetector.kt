@@ -25,7 +25,6 @@ class CrashDetector(
     context: Context,
     private var sensitivity: SensitivityLevel = SensitivityLevel.MEDIUM,
 ) : SensorEventListener {
-
     companion object {
         private const val TAG = "CrashDetector"
         private const val WINDOW_SIZE_MS = 1000L // 1초 롤링 윈도우
@@ -86,7 +85,7 @@ class CrashDetector(
             sensorManager.registerListener(
                 this,
                 linearAccelSensor,
-                SensorManager.SENSOR_DELAY_GAME
+                SensorManager.SENSOR_DELAY_GAME,
             )
             Log.d(TAG, "Using TYPE_LINEAR_ACCELERATION")
         } else {
@@ -94,12 +93,12 @@ class CrashDetector(
             sensorManager.registerListener(
                 this,
                 accelSensor,
-                SensorManager.SENSOR_DELAY_GAME
+                SensorManager.SENSOR_DELAY_GAME,
             )
             sensorManager.registerListener(
                 this,
                 gravitySensor,
-                SensorManager.SENSOR_DELAY_GAME
+                SensorManager.SENSOR_DELAY_GAME,
             )
             Log.d(TAG, "Using TYPE_ACCELEROMETER + TYPE_GRAVITY fallback")
         }
@@ -109,7 +108,7 @@ class CrashDetector(
             sensorManager.registerListener(
                 this,
                 it,
-                SensorManager.SENSOR_DELAY_GAME
+                SensorManager.SENSOR_DELAY_GAME,
             )
             Log.d(TAG, "Gyroscope sensor registered")
         }
@@ -157,7 +156,10 @@ class CrashDetector(
         }
     }
 
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+    override fun onAccuracyChanged(
+        sensor: Sensor?,
+        accuracy: Int,
+    ) {
         // 정확도 변경 무시
     }
 
@@ -172,7 +174,10 @@ class CrashDetector(
     /**
      * 선형가속도 처리 (저역통과 필터 적용)
      */
-    private fun processLinearAcceleration(values: FloatArray, timestamp: Long) {
+    private fun processLinearAcceleration(
+        values: FloatArray,
+        timestamp: Long,
+    ) {
         // 저역통과 필터 적용 (급격한 노이즈 제거)
         filteredAccel[0] = lowPassFilter(values[0], filteredAccel[0])
         filteredAccel[1] = lowPassFilter(values[1], filteredAccel[1])
@@ -226,7 +231,10 @@ class CrashDetector(
     /**
      * 자이로스코프 처리 (필터 적용)
      */
-    private fun processGyroscope(values: FloatArray, timestamp: Long) {
+    private fun processGyroscope(
+        values: FloatArray,
+        timestamp: Long,
+    ) {
         // 저역통과 필터 적용
         filteredGyro[0] = lowPassFilter(values[0], filteredGyro[0])
         filteredGyro[1] = lowPassFilter(values[1], filteredGyro[1])
@@ -245,7 +253,10 @@ class CrashDetector(
     /**
      * 임팩트 + 자유낙하 분석 (개선된 로직)
      */
-    private fun analyzeImpact(magnitude: Float, timestamp: Long) {
+    private fun analyzeImpact(
+        magnitude: Float,
+        timestamp: Long,
+    ) {
         // 쿨다운 체크
         if (timestamp - lastImpactTime < IMPACT_COOLDOWN_MS) {
             return
@@ -301,25 +312,36 @@ class CrashDetector(
     /**
      * 사고 판정 (자이로 + 임팩트, 추가 검증)
      */
-    private fun checkCrashCondition(impactMagnitude: Float, timestamp: Long, reason: String) {
+    private fun checkCrashCondition(
+        impactMagnitude: Float,
+        timestamp: Long,
+        reason: String,
+    ) {
         // 최근 500ms 내의 자이로 데이터만 확인 (시간 상관성)
         val recentGyro = gyroBuffer.filter { timestamp - it.timestamp < 500 }
         val maxGyro = recentGyro.maxOfOrNull { it.magnitude } ?: 0f
         val gyroThreshold = sensitivity.rotationThreshold
 
-        Log.d(TAG, "🔍 Checking crash: Impact=${String.format("%.2f", impactMagnitude/GRAVITY)}g, MaxGyro=${String.format("%.2f", maxGyro)} rad/s")
+        Log.d(
+            TAG,
+            "🔍 Checking crash: Impact=${String.format(
+                "%.2f",
+                impactMagnitude / GRAVITY,
+            )}g, MaxGyro=${String.format("%.2f", maxGyro)} rad/s",
+        )
 
         // 판정 조건: 강한 충격 + 회전
         if (impactMagnitude > sensitivity.impactThreshold * GRAVITY && maxGyro > gyroThreshold) {
             crashDetectionCount++
-            Log.e(TAG, "🚨🚨 CRASH DETECTED #${crashDetectionCount}! Reason: $reason")
+            Log.e(TAG, "🚨🚨 CRASH DETECTED #$crashDetectionCount! Reason: $reason")
 
-            val event = CrashEvent(
-                timestamp = timestamp,
-                impactMagnitude = impactMagnitude / GRAVITY,
-                rotationMagnitude = maxGyro,
-                detectionReason = reason
-            )
+            val event =
+                CrashEvent(
+                    timestamp = timestamp,
+                    impactMagnitude = impactMagnitude / GRAVITY,
+                    rotationMagnitude = maxGyro,
+                    detectionReason = reason,
+                )
 
             _crashEvents.tryEmit(event)
             lastImpactTime = timestamp
@@ -333,7 +355,7 @@ class CrashDetector(
                 }
             }, IMPACT_COOLDOWN_MS)
         } else {
-            Log.d(TAG, "✅ Not a crash (gyro=${String.format("%.2f", maxGyro)} < ${gyroThreshold} or impact too low)")
+            Log.d(TAG, "✅ Not a crash (gyro=${String.format("%.2f", maxGyro)} < $gyroThreshold or impact too low)")
         }
     }
 
@@ -341,21 +363,31 @@ class CrashDetector(
      * 저역통과 필터 (Low-pass filter)
      * 급격한 노이즈 제거, 부드러운 신호 유지
      */
-    private fun lowPassFilter(current: Float, previous: Float): Float {
+    private fun lowPassFilter(
+        current: Float,
+        previous: Float,
+    ): Float {
         return previous * LOW_PASS_ALPHA + current * (1 - LOW_PASS_ALPHA)
     }
 
     /**
      * 크기 계산
      */
-    private fun calculateMagnitude(x: Float, y: Float, z: Float): Float {
+    private fun calculateMagnitude(
+        x: Float,
+        y: Float,
+        z: Float,
+    ): Float {
         return sqrt(x * x + y * y + z * z)
     }
 
     /**
      * 오래된 데이터 정리 (롤링 윈도우)
      */
-    private fun cleanOldData(buffer: MutableList<SensorData>, currentTime: Long) {
+    private fun cleanOldData(
+        buffer: MutableList<SensorData>,
+        currentTime: Long,
+    ) {
         buffer.removeAll { currentTime - it.timestamp > WINDOW_SIZE_MS }
     }
 
@@ -370,6 +402,6 @@ class CrashDetector(
             Sensitivity: ${sensitivity.name}
             Accel Buffer: ${accelBuffer.size}
             Gyro Buffer: ${gyroBuffer.size}
-        """.trimIndent()
+            """.trimIndent()
     }
 }

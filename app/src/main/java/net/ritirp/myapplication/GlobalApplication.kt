@@ -9,10 +9,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import net.ritirp.myapplication.data.model.SensitivityLevel
-import net.ritirp.myapplication.data.repository.CrashSettingsRepository
-import net.ritirp.myapplication.data.repository.TeamRepository
-import net.ritirp.myapplication.data.repository.FriendRepository
 import net.ritirp.myapplication.data.repository.AuthRepository
+import net.ritirp.myapplication.data.repository.CrashSettingsRepository
+import net.ritirp.myapplication.data.repository.FriendRepository
+import net.ritirp.myapplication.data.repository.TeamRepository
 import net.ritirp.myapplication.service.AppVisibilityObserver
 import net.ritirp.myapplication.service.CrashDetector
 
@@ -22,7 +22,6 @@ import net.ritirp.myapplication.service.CrashDetector
  * - CrashDetector 인스턴스를 전역으로 관리
  */
 class GlobalApplication : Application() {
-
     lateinit var crashDetector: CrashDetector
         private set
 
@@ -81,7 +80,7 @@ class GlobalApplication : Application() {
             },
             onBackground = {
                 crashDetector.stop()
-            }
+            },
         ).observe()
     }
 

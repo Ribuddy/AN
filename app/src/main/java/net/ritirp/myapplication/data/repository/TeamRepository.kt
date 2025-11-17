@@ -28,7 +28,7 @@ class TeamRepository(private val context: Context) {
         name: String,
         description: String? = null,
         members: List<String>,
-        isCrew: Boolean = false
+        isCrew: Boolean = false,
     ): Result<String> {
         return try {
             val token = getAccessToken()
@@ -36,18 +36,19 @@ class TeamRepository(private val context: Context) {
                 return Result.failure(Exception("로그인이 필요합니다."))
             }
 
-            val request = CreateTeamRequest(
-                name = name,
-                description = description,
-                members = members,
-                isCrew = isCrew
-            )
+            val request =
+                CreateTeamRequest(
+                    name = name,
+                    description = description,
+                    members = members,
+                    isCrew = isCrew,
+                )
 
             Log.d("TeamRepository", "팀 생성 요청: name=$name, members=${members.size}명")
             val response = teamApi.createTeam("Bearer $token", request)
 
             if (response.isSuccessful && response.body()?.isSuccess == true) {
-                val teamId = response.body()?.result ?: ""  // result가 직접 String
+                val teamId = response.body()?.result ?: "" // result가 직접 String
                 Log.d("TeamRepository", "팀 생성 성공: teamId=$teamId")
                 Result.success(teamId)
             } else {
@@ -75,7 +76,7 @@ class TeamRepository(private val context: Context) {
             val response = teamApi.getTeamList("Bearer $token")
 
             if (response.isSuccessful && response.body()?.isSuccess == true) {
-                val teams = response.body()?.result ?: emptyList()  // result가 직접 List
+                val teams = response.body()?.result ?: emptyList() // result가 직접 List
                 Log.d("TeamRepository", "팀 목록 조회 성공: ${teams.size}개 팀")
                 Result.success(teams)
             } else {

@@ -54,6 +54,18 @@ fun TeamManagementScreen(
         }
     }
 
+    // 선택된 팀이 있으면 팀 상세 화면 표시
+    if (uiState.selectedTeam != null) {
+        TeamDetailScreen(
+            team = uiState.selectedTeam!!,
+            joinCode = uiState.teamJoinCode,
+            onBack = { viewModel.clearSelectedTeam() },
+            onGetJoinCode = { viewModel.getTeamJoinCode(uiState.selectedTeam!!.id) },
+            snackbarHostState = snackbarHostState
+        )
+        return
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -443,6 +455,275 @@ fun JoinTeamDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("취소")
+            }
+        }
+    )
+}
+
+/**
+ * 팀 상세 화면
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TeamDetailScreen(
+    team: TeamInfo,
+    joinCode: String?,
+    onBack: () -> Unit,
+    onGetJoinCode: () -> Unit,
+    snackbarHostState: SnackbarHostState
+) {
+    var showJoinCodeDialog by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(team.name) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "뒤로가기")
+                    }
+                }
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    showJoinCodeDialog = true
+                    onGetJoinCode()
+                }
+            ) {
+                Icon(Icons.Default.Share, "팀원 초대")
+            }
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            // 팀 정보 카드
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (team.isCrew) Icons.Default.Star else Icons.Default.Groups,
+                            contentDescription = null,
+                            tint = if (team.isCrew) Color(0xFFFFD700) else MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = team.name,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                    team.description?.let { desc ->
+                        Text(
+                            text = desc,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+
+            // 팀원 목록 헤더
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "팀원 (${team.members?.size ?: 0}명)",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // 팀원 목록
+            if (team.members.isNullOrEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "팀원이 없습니다",
+                        color = Color.Gray
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(team.members) { member ->
+                        TeamMemberCard(member = member)
+                    }
+                }
+            }
+        }
+
+        // 팀 참여 코드 다이얼로그
+        if (showJoinCodeDialog) {
+            TeamJoinCodeDialog(
+                teamName = team.name,
+                joinCode = joinCode,
+                onDismiss = { showJoinCodeDialog = false }
+            )
+        }
+    }
+}
+
+/**
+ * 팀원 카드
+ */
+@Composable
+fun TeamMemberCard(member: net.ritirp.myapplication.data.model.TeamMember) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // 프로필 아이콘
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+
+            // 이름과 닉네임
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = member.name,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                member.nickname?.let { nickname ->
+                    Text(
+                        text = nickname,
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 팀 참여 코드 다이얼로그
+ */
+@Composable
+fun TeamJoinCodeDialog(
+    teamName: String,
+    joinCode: String?,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "팀원 초대",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "'$teamName' 팀에 친구를 초대하세요",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+
+                if (joinCode != null) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "팀 참여 코드",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Text(
+                                    text = joinCode,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            Icon(
+                                Icons.Default.ContentCopy,
+                                contentDescription = "복사",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                    Text(
+                        text = "이 코드를 친구에게 공유하면 팀에 참여할 수 있습니다",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("확인")
             }
         }
     )

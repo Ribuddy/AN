@@ -12,12 +12,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import net.ritirp.myapplication.data.model.RidingStatus
 import net.ritirp.myapplication.data.model.TeamInfo
 import net.ritirp.myapplication.data.model.TeamMemberLocation
-import net.ritirp.myapplication.data.model.RidingStatus
-import net.ritirp.myapplication.data.repository.TeamRepository
 import net.ritirp.myapplication.data.repository.DrivingRepository
 import net.ritirp.myapplication.data.repository.MapRepository
+import net.ritirp.myapplication.data.repository.TeamRepository
 import kotlin.coroutines.resume
 
 /**
@@ -45,7 +45,7 @@ class TeamViewModel(
         suspendCancellableCoroutine { continuation ->
             fusedLocationClient.getCurrentLocation(
                 Priority.PRIORITY_HIGH_ACCURACY,
-                CancellationTokenSource().token
+                CancellationTokenSource().token,
             ).addOnSuccessListener { location ->
                 if (location != null) {
                     continuation.resume(Pair(location.latitude, location.longitude))
@@ -257,26 +257,28 @@ class TeamViewModel(
         lat: Double,
         lon: Double,
         ele: Double? = null,
-        name: String? = null
+        name: String? = null,
     ) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             drivingRepository.startTeamRiding(teamId, lat, lon, ele, name)
                 .onSuccess { ridingRecordId ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        successMessage = "팀 라이딩이 시작되었습니다.",
-                        currentRidingRecordId = ridingRecordId
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isLoading = false,
+                            successMessage = "팀 라이딩이 시작되었습니다.",
+                            currentRidingRecordId = ridingRecordId,
+                        )
                     // LocationUpdateManager가 자동으로 위치 업데이트 시작
                     android.util.Log.d("TeamViewModel", "팀 라이딩 시작 성공, LocationUpdateManager가 자동으로 위치 업데이트 시작")
                 }
                 .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        error = error.message ?: "팀 라이딩 시작에 실패했습니다.",
-                        isLoading = false
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            error = error.message ?: "팀 라이딩 시작에 실패했습니다.",
+                            isLoading = false,
+                        )
                 }
         }
     }
@@ -301,7 +303,7 @@ class TeamViewModel(
     fun updateMyLocationAndGetTeamLocations(
         lat: Double,
         lon: Double,
-        ele: Double? = null
+        ele: Double? = null,
     ) {
         val ridingRecordId = _uiState.value.currentRidingRecordId
 
@@ -316,9 +318,10 @@ class TeamViewModel(
             drivingRepository.updateLocationAndGetTeamLocations(ridingRecordId, lat, lon, ele)
                 .onSuccess { locations ->
                     android.util.Log.d("TeamViewModel", "위치 업데이트 성공: ${locations.size}명의 팀원")
-                    _uiState.value = _uiState.value.copy(
-                        teamMemberLocations = locations
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            teamMemberLocations = locations,
+                        )
                 }
                 .onFailure { error ->
                     // 위치 업데이트는 조용히 실패 처리 (너무 자주 발생할 수 있음)
@@ -334,7 +337,7 @@ class TeamViewModel(
         lat: Double,
         lon: Double,
         ele: Double? = null,
-        name: String? = null
+        name: String? = null,
     ) {
         val ridingRecordId = _uiState.value.currentRidingRecordId ?: return
 
@@ -343,18 +346,20 @@ class TeamViewModel(
 
             drivingRepository.endTeamRiding(ridingRecordId, lat, lon, ele, name)
                 .onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        successMessage = "팀 라이딩이 종료되었습니다.",
-                        currentRidingRecordId = null,
-                        teamMemberLocations = emptyList()
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isLoading = false,
+                            successMessage = "팀 라이딩이 종료되었습니다.",
+                            currentRidingRecordId = null,
+                            teamMemberLocations = emptyList(),
+                        )
                 }
                 .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        error = error.message ?: "팀 라이딩 종료에 실패했습니다.",
-                        isLoading = false
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            error = error.message ?: "팀 라이딩 종료에 실패했습니다.",
+                            isLoading = false,
+                        )
                 }
         }
     }

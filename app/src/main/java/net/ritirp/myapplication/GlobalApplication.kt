@@ -13,8 +13,8 @@ import net.ritirp.myapplication.data.model.SensitivityLevel
 import net.ritirp.myapplication.data.repository.AuthRepository
 import net.ritirp.myapplication.data.repository.CrashSettingsRepository
 import net.ritirp.myapplication.data.repository.FriendRepository
-import net.ritirp.myapplication.data.repository.TeamRepository
 import net.ritirp.myapplication.data.repository.MapRepository
+import net.ritirp.myapplication.data.repository.TeamRepository
 import net.ritirp.myapplication.service.AppVisibilityObserver
 import net.ritirp.myapplication.service.CrashDetector
 import net.ritirp.myapplication.service.LocationUpdateManager
@@ -68,21 +68,23 @@ class GlobalApplication : Application() {
         authRepository = AuthRepository(this)
 
         // 라이딩 저장소 초기화
-        drivingRepository = net.ritirp.myapplication.data.repository.DrivingRepository(
-            net.ritirp.myapplication.data.api.RetrofitClient.drivingApi,
-            this
-        )
+        drivingRepository =
+            net.ritirp.myapplication.data.repository.DrivingRepository(
+                net.ritirp.myapplication.data.api.RetrofitClient.drivingApi,
+                this,
+            )
 
         // Map 저장소 초기화
         mapRepository = MapRepository(LocationServices.getFusedLocationProviderClient(this))
 
         // 위치 업데이트 매니저 초기화 (Application Scope에서 실행)
-        locationUpdateManager = LocationUpdateManager(
-            applicationScope,
-            LocationServices.getFusedLocationProviderClient(this),
-            drivingRepository,
-            mapRepository
-        )
+        locationUpdateManager =
+            LocationUpdateManager(
+                applicationScope,
+                LocationServices.getFusedLocationProviderClient(this),
+                drivingRepository,
+                mapRepository,
+            )
 
         // 사고 감지기 초기화
         crashDetector = CrashDetector(this, SensitivityLevel.MEDIUM)

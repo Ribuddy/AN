@@ -68,7 +68,7 @@ fun TeamManagementScreen(
             onEndRiding = { viewModel.endRiding() },
             ridingStatus = uiState.ridingStatus,
             teamMemberLocations = uiState.teamMemberLocations,
-            onNavigateToMap = onNavigateToMap
+            onNavigateToMap = onNavigateToMap,
         )
         return
     }
@@ -561,21 +561,25 @@ fun TeamDetailScreen(
 
             // 팀 라이딩 시작/종료 버튼
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = when (ridingStatus) {
-                        net.ritirp.myapplication.data.model.RidingStatus.RIDING -> Color(0xFF4CAF50)
-                        else -> MaterialTheme.colorScheme.primary
-                    }
-                )
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor =
+                            when (ridingStatus) {
+                                net.ritirp.myapplication.data.model.RidingStatus.RIDING -> Color(0xFF4CAF50)
+                                else -> MaterialTheme.colorScheme.primary
+                            },
+                    ),
             ) {
                 Button(
                     onClick = {
                         when (ridingStatus) {
                             net.ritirp.myapplication.data.model.RidingStatus.IDLE,
-                            net.ritirp.myapplication.data.model.RidingStatus.ENDED -> {
+                            net.ritirp.myapplication.data.model.RidingStatus.ENDED,
+                            -> {
                                 onStartRiding(team.id)
                                 // 라이딩 시작하면 메인 화면(지도)으로 이동
                                 onNavigateToMap()
@@ -586,32 +590,37 @@ fun TeamDetailScreen(
                             else -> {}
                         }
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = when (ridingStatus) {
-                            net.ritirp.myapplication.data.model.RidingStatus.RIDING -> Color(0xFFEF5350)
-                            else -> MaterialTheme.colorScheme.primary
-                        }
-                    )
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor =
+                                when (ridingStatus) {
+                                    net.ritirp.myapplication.data.model.RidingStatus.RIDING -> Color(0xFFEF5350)
+                                    else -> MaterialTheme.colorScheme.primary
+                                },
+                        ),
                 ) {
                     Icon(
-                        imageVector = when (ridingStatus) {
-                            net.ritirp.myapplication.data.model.RidingStatus.RIDING -> Icons.Default.Stop
-                            else -> Icons.Default.DirectionsBike
-                        },
+                        imageVector =
+                            when (ridingStatus) {
+                                net.ritirp.myapplication.data.model.RidingStatus.RIDING -> Icons.Default.Stop
+                                else -> Icons.Default.DirectionsBike
+                            },
                         contentDescription = null,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(24.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = when (ridingStatus) {
-                            net.ritirp.myapplication.data.model.RidingStatus.RIDING -> "팀 라이딩 종료"
-                            else -> "팀 라이딩 시작"
-                        },
+                        text =
+                            when (ridingStatus) {
+                                net.ritirp.myapplication.data.model.RidingStatus.RIDING -> "팀 라이딩 종료"
+                                else -> "팀 라이딩 시작"
+                            },
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 }
             }
@@ -869,7 +878,7 @@ fun TeamRidingMapScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("${teamName} 팀 라이딩") },
+                title = { Text("$teamName 팀 라이딩") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "뒤로가기")
@@ -922,12 +931,14 @@ fun TeamRidingMapScreen(
             // 라이딩 종료 버튼
             Button(
                 onClick = { showEndRidingDialog = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFEF5350),
-                )
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFEF5350),
+                    ),
             ) {
                 Text(
                     text = "라이딩 종료",

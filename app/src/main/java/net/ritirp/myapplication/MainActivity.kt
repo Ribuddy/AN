@@ -190,12 +190,13 @@ fun AppNavigation(
             val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
             val teamViewModel =
                 androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.TeamViewModel>(
-                    factory = net.ritirp.myapplication.presentation.viewmodel.TeamViewModelFactory(
-                        teamRepository,
-                        drivingRepository,
-                        fusedLocationClient,
-                        mapRepository
-                    ),
+                    factory =
+                        net.ritirp.myapplication.presentation.viewmodel.TeamViewModelFactory(
+                            teamRepository,
+                            drivingRepository,
+                            fusedLocationClient,
+                            mapRepository,
+                        ),
                 )
             net.ritirp.myapplication.presentation.screen.TeamManagementScreen(
                 viewModel = teamViewModel,
@@ -204,7 +205,7 @@ fun AppNavigation(
                     navController.navigate("main") {
                         popUpTo("main") { inclusive = false }
                     }
-                }
+                },
             )
         }
     }

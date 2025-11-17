@@ -16,7 +16,7 @@ import net.ritirp.myapplication.data.model.*
  */
 class DrivingRepository(
     private val drivingApi: DrivingApi,
-    context: Context
+    context: Context,
 ) {
     private val dataStore = DataStoreManager.getDataStore(context)
 
@@ -46,7 +46,7 @@ class DrivingRepository(
         lat: Double,
         lon: Double,
         ele: Double? = null,
-        name: String? = null
+        name: String? = null,
     ): Result<String> {
         return try {
             val token = "Bearer ${getAccessToken()}"
@@ -78,7 +78,7 @@ class DrivingRepository(
         ridingRecordId: String,
         lat: Double,
         lon: Double,
-        ele: Double? = null
+        ele: Double? = null,
     ): Result<List<TeamMemberLocation>> {
         return try {
             val token = "Bearer ${getAccessToken()}"
@@ -110,7 +110,7 @@ class DrivingRepository(
         lat: Double,
         lon: Double,
         ele: Double? = null,
-        name: String? = null
+        name: String? = null,
     ): Result<Unit> {
         return try {
             val token = "Bearer ${getAccessToken()}"

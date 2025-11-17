@@ -15,7 +15,7 @@ interface DrivingApi {
     suspend fun startTeamRiding(
         @Header("Authorization") token: String,
         @Path("teamId") teamId: String,
-        @Body request: StartTeamRidingRequest
+        @Body request: StartTeamRidingRequest,
     ): Response<ApiResponse<String>> // ridingRecordId 반환
 
     /**
@@ -25,7 +25,7 @@ interface DrivingApi {
     suspend fun updateLocationAndGetTeamLocations(
         @Header("Authorization") token: String,
         @Path("ridingRecordId") ridingRecordId: String,
-        @Body location: LocationUpdateRequest
+        @Body location: LocationUpdateRequest,
     ): Response<ApiResponse<List<TeamMemberLocation>>>
 
     /**
@@ -35,6 +35,6 @@ interface DrivingApi {
     suspend fun endTeamRiding(
         @Header("Authorization") token: String,
         @Path("ridingRecordId") ridingRecordId: String,
-        @Body request: EndTeamRidingRequest
+        @Body request: EndTeamRidingRequest,
     ): Response<ApiResponse<Unit>>
 }

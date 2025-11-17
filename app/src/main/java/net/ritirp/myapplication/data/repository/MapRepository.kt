@@ -36,15 +36,16 @@ class MapRepository(
      * 팀원 위치를 마커로 업데이트
      */
     fun updateTeamMemberMarkers(teamMemberLocations: List<net.ritirp.myapplication.data.model.TeamMemberLocation>) {
-        val teamMarkers = teamMemberLocations.map { member ->
-            MarkerData(
-                id = "team_${member.userId}",
-                location = LocationData(member.lat, member.lon),
-                title = member.memberName,
-                emoji = "👤",
-                type = MarkerType.TEAM_MEMBER,
-            )
-        }
+        val teamMarkers =
+            teamMemberLocations.map { member ->
+                MarkerData(
+                    id = "team_${member.userId}",
+                    location = LocationData(member.lat, member.lon),
+                    title = member.memberName,
+                    emoji = "👤",
+                    type = MarkerType.TEAM_MEMBER,
+                )
+            }
         _markers.value = teamMarkers
         println("DEBUG: Updated team markers: ${teamMarkers.size} members")
     }

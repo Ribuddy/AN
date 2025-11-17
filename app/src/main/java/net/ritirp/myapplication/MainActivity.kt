@@ -48,7 +48,8 @@ import net.ritirp.myapplication.presentation.viewmodel.MapViewModelFactory
  */
 class MainActivity : ComponentActivity() {
     private val mapRepository by lazy {
-        MapRepository(LocationServices.getFusedLocationProviderClient(this))
+        // GlobalApplication의 MapRepository 사용 (싱글톤)
+        GlobalApplication.getMapRepository(this)
     }
 
     private val mapViewModel: MapViewModel by viewModels {
@@ -64,6 +65,7 @@ class MainActivity : ComponentActivity() {
             AppNavigation(
                 mapViewModel = mapViewModel,
                 loginViewModel = loginViewModel,
+                mapRepository = mapRepository,
             )
         }
     }
@@ -73,6 +75,7 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation(
     mapViewModel: MapViewModel,
     loginViewModel: LoginViewModel,
+    mapRepository: MapRepository,
 ) {
     val navController = rememberNavController()
     val authState by loginViewModel.authState.collectAsStateWithLifecycle()
@@ -142,7 +145,10 @@ fun AppNavigation(
                 viewModel = mapViewModel,
                 onNavigateToCrashSettings = {
                     navController.navigate("crash_settings")
-                }
+                },
+                onNavigateToTeamManagement = {
+                    navController.navigate("team_management")
+                },
             )
         }
 
@@ -159,7 +165,7 @@ fun AppNavigation(
                     onCancel = {
                         Log.d("AppNavigation", "User is OK, dismissing alert")
                         navController.popBackStack()
-                    }
+                    },
                 )
             }
         }
@@ -167,12 +173,39 @@ fun AppNavigation(
         // 사고 감지 설정 화면
         composable("crash_settings") {
             val crashSettingsRepository = GlobalApplication.getCrashSettingsRepository(context)
-            val crashSettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.CrashSettingsViewModel>(
-                factory = net.ritirp.myapplication.presentation.viewmodel.CrashSettingsViewModelFactory(crashSettingsRepository)
-            )
+            val crashSettingsViewModel =
+                androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.CrashSettingsViewModel>(
+                    factory = net.ritirp.myapplication.presentation.viewmodel.CrashSettingsViewModelFactory(crashSettingsRepository),
+                )
             net.ritirp.myapplication.presentation.screen.CrashSettingsScreen(
                 viewModel = crashSettingsViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+            )
+        }
+
+        // 팀 관리 화면
+        composable("team_management") {
+            val teamRepository = GlobalApplication.getTeamRepository(context)
+            val drivingRepository = GlobalApplication.getDrivingRepository(context)
+            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+            val teamViewModel =
+                androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.TeamViewModel>(
+                    factory =
+                        net.ritirp.myapplication.presentation.viewmodel.TeamViewModelFactory(
+                            teamRepository,
+                            drivingRepository,
+                            fusedLocationClient,
+                            mapRepository,
+                        ),
+                )
+            net.ritirp.myapplication.presentation.screen.TeamManagementScreen(
+                viewModel = teamViewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToMap = {
+                    navController.navigate("main") {
+                        popUpTo("main") { inclusive = false }
+                    }
+                },
             )
         }
     }
@@ -180,9 +213,14 @@ fun AppNavigation(
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun MapApp(viewModel: MapViewModel, onNavigateToCrashSettings: () -> Unit = {}) {
+fun MapApp(
+    viewModel: MapViewModel,
+    onNavigateToCrashSettings: () -> Unit = {},
+    onNavigateToTeamManagement: () -> Unit = {},
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
+    val context = LocalContext.current // context 추가
 
     // 권한 요청
     LaunchedEffect(Unit) {
@@ -219,10 +257,23 @@ fun MapApp(viewModel: MapViewModel, onNavigateToCrashSettings: () -> Unit = {}) 
                     modifier = Modifier.padding(paddingValues),
                 )
             }
+            BottomTab.FRIEND -> {
+                val friendRepository = GlobalApplication.getFriendRepository(context)
+                val authRepository = GlobalApplication.getAuthRepository(context)
+                val friendViewModel =
+                    androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.FriendViewModel>(
+                        factory = net.ritirp.myapplication.presentation.viewmodel.FriendViewModelFactory(friendRepository, authRepository),
+                    )
+                net.ritirp.myapplication.presentation.screen.FriendScreen(
+                    viewModel = friendViewModel,
+                    modifier = Modifier.padding(paddingValues),
+                )
+            }
             BottomTab.MY -> {
                 net.ritirp.myapplication.presentation.screen.MyScreen(
                     onNavigateToCrashSettings = onNavigateToCrashSettings,
-                    modifier = Modifier.padding(paddingValues)
+                    onNavigateToTeamManagement = onNavigateToTeamManagement,
+                    modifier = Modifier.padding(paddingValues),
                 )
             }
             else -> {

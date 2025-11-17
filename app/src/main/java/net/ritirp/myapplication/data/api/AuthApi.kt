@@ -2,8 +2,11 @@ package net.ritirp.myapplication.data.api
 
 import net.ritirp.myapplication.data.model.ApiResponse
 import net.ritirp.myapplication.data.model.LoginResponse
+import net.ritirp.myapplication.data.model.UserInfo
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.POST
 
 /**
@@ -12,6 +15,7 @@ import retrofit2.http.POST
 interface AuthApi {
     companion object {
         const val BASE_URL = "https://ribuddy.kyeoungwoon.kr/"
+//        const val BASE_URL = "http://10.210.60.65:7777/"
     }
 
     /**
@@ -23,4 +27,12 @@ interface AuthApi {
     suspend fun verifyGoogleToken(
         @Body request: Map<String, String>,
     ): Response<ApiResponse<LoginResponse>>
+
+    /**
+     * 내 정보 조회
+     */
+    @GET("v1/users/me")
+    suspend fun getMyInfo(
+        @Header("Authorization") token: String,
+    ): Response<ApiResponse<UserInfo>>
 }

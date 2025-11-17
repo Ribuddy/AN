@@ -13,7 +13,6 @@ class AppVisibilityObserver(
     private val onForeground: () -> Unit,
     private val onBackground: () -> Unit,
 ) : DefaultLifecycleObserver {
-
     companion object {
         private const val TAG = "AppVisibilityObserver"
     }

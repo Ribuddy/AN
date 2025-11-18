@@ -33,12 +33,11 @@ import net.ritirp.myapplication.data.model.AuthState
 
 /**
  * 로그인 화면
- * 구글 및 카카오 로그인 기능 제공
+ * 구글 로그인 기능 제공
  */
 @Composable
 fun LoginScreen(
     onGoogleLoginSuccess: (idToken: String, userName: String?, userEmail: String?) -> Unit,
-    onKakaoLoginClick: () -> Unit,
     authState: AuthState = AuthState.Idle,
     modifier: Modifier = Modifier,
     onLoginError: (String) -> Unit,
@@ -140,40 +139,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // 카카오 로그인 버튼
-            Button(
-                onClick = onKakaoLoginClick,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFEE500),
-                        contentColor = Color.Black,
-                    ),
-                shape = RoundedCornerShape(8.dp),
-                enabled = authState !is AuthState.Loading,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    Text(
-                        text = "💬",
-                        fontSize = 24.sp,
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "카카오 로그인",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             // 구글 로그인 버튼
             Button(
                 onClick = {
@@ -271,7 +236,6 @@ private fun handleSignInResult(
 fun LoginScreenPreview() {
     LoginScreen(
         onGoogleLoginSuccess = { _, _, _ -> },
-        onKakaoLoginClick = {},
         onLoginError = {},
     )
 }

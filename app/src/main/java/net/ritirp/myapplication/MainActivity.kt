@@ -129,9 +129,6 @@ fun AppNavigation(
                 onGoogleLoginSuccess = { idToken, userName, userEmail ->
                     loginViewModel.handleOAuthCallback(idToken, userName, userEmail)
                 },
-                onKakaoLoginClick = {
-                    // TODO: 카카오 로그인 구현
-                },
                 authState = authState,
                 onLoginError = { errorMessage ->
                     loginViewModel.setError(errorMessage)

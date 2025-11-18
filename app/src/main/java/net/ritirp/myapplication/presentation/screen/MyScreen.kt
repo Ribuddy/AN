@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,7 +44,7 @@ fun MyScreen(
             modifier = Modifier.fillMaxWidth(),
             colors =
                 CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    containerColor = Color(0xFFDBE8FF),
                 ),
         ) {
             Row(
@@ -61,7 +62,7 @@ fun MyScreen(
                     Icon(
                         imageVector = Icons.Default.Warning,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = Color(0xFF4285F4),
                         modifier = Modifier.size(32.dp),
                     )
                     Column {
@@ -128,32 +129,6 @@ fun MyScreen(
                     imageVector = Icons.Default.Settings,
                     contentDescription = "설정 열기",
                 )
-            }
-        }
-
-        // 다른 설정들 (준비중)
-        Text(
-            text = "기타 설정",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 16.dp),
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors =
-                CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                ),
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-            ) {
-                Text("프로필 설정", fontSize = 16.sp)
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                Text("알림 설정", fontSize = 16.sp)
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                Text("앱 정보", fontSize = 16.sp)
             }
         }
     }

@@ -10,12 +10,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import net.ritirp.myapplication.data.model.SensitivityLevel
 import net.ritirp.myapplication.presentation.viewmodel.CrashSettingsViewModel
+
+private val CrashPrimary = Color(0xFF4285F4)
+private val ActivationEnabled = Color(0xFFDBE8FF)
+private val ActivationDisabled = Color(0xFFF3F6FF)
+private val ThresholdBackground = Color(0xFFDBE8FF)
+private val TipsBackground = Color(0xFFACC6F0)
+private val SensitivitySelectedBackground = Color(0x144285F4)
 
 /**
  * 사고 감지 설정 화면
@@ -30,14 +38,20 @@ fun CrashSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
+        containerColor = Color.White,
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = { Text("사고 감지 설정") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "뒤로가기")
+                        Icon(Icons.Default.ArrowBack, "뒤로가기", tint = Color(0xFF1F1F1F))
                     }
                 },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.White,
+                    titleContentColor = Color(0xFF1F1F1F),
+                    navigationIconContentColor = Color(0xFF1F1F1F),
+                ),
             )
         },
     ) { paddingValues ->
@@ -57,9 +71,9 @@ fun CrashSettingsScreen(
                     CardDefaults.cardColors(
                         containerColor =
                             if (uiState.isDetectionEnabled) {
-                                MaterialTheme.colorScheme.primaryContainer
+                                ActivationEnabled
                             } else {
-                                MaterialTheme.colorScheme.surfaceVariant
+                                ActivationDisabled
                             },
                     ),
             ) {
@@ -92,6 +106,13 @@ fun CrashSettingsScreen(
                     Switch(
                         checked = uiState.isDetectionEnabled,
                         onCheckedChange = { viewModel.toggleDetection(it) },
+                        colors =
+                            SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = CrashPrimary,
+                                uncheckedThumbColor = Color.White,
+                                uncheckedTrackColor = Color(0xFFCFD8DC),
+                            ),
                     )
                 }
             }
@@ -109,7 +130,7 @@ fun CrashSettingsScreen(
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = CrashPrimary,
                         )
                         Text(
                             text = "감지 민감도",
@@ -141,10 +162,7 @@ fun CrashSettingsScreen(
             // 현재 설정 요약
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    ),
+                colors = CardDefaults.cardColors(containerColor = ThresholdBackground),
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -167,10 +185,7 @@ fun CrashSettingsScreen(
             // 도움말
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    ),
+                colors = CardDefaults.cardColors(containerColor = TipsBackground),
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -189,7 +204,7 @@ fun CrashSettingsScreen(
                                 "• 감지되지 않으면 민감도를 높여보세요",
                         fontSize = 14.sp,
                         lineHeight = 20.sp,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        color = Color(0xFF1E2A44),
                     )
                 }
             }
@@ -219,16 +234,13 @@ private fun SensitivityOption(
         shape = MaterialTheme.shapes.medium,
         color =
             if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer
+                SensitivitySelectedBackground
             } else {
-                MaterialTheme.colorScheme.surface
+                Color.White
             },
         border =
             if (isSelected) {
-                androidx.compose.foundation.BorderStroke(
-                    2.dp,
-                    MaterialTheme.colorScheme.primary,
-                )
+                androidx.compose.foundation.BorderStroke(2.dp, CrashPrimary)
             } else {
                 null
             },
@@ -258,6 +270,7 @@ private fun SensitivityOption(
                 selected = isSelected,
                 onClick = onSelect,
                 enabled = enabled,
+                colors = RadioButtonDefaults.colors(selectedColor = CrashPrimary),
             )
         }
     }
@@ -276,13 +289,13 @@ private fun ThresholdInfo(
         Text(
             text = label,
             fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            color = Color(0xFF1E2A44),
         )
         Text(
             text = value,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            color = Color(0xFF1E2A44),
         )
     }
 }

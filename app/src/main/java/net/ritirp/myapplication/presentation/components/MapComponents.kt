@@ -4,11 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -127,7 +122,7 @@ fun BottomNavigationBar(
 
             val isSelected = currentTab == tab
             val selectedColor = Color(0xFF4285F4)
-            val unselectedColor = Color.Gray
+            val unselectedColor = Color(0xFF9E9E9E)
 
             NavigationBarItem(
                 selected = isSelected,
@@ -137,22 +132,23 @@ fun BottomNavigationBar(
                         painter = painterResource(id = iconRes),
                         contentDescription = tab.label,
                         tint = if (isSelected) selectedColor else unselectedColor,
-                        modifier = Modifier.size(if (isSelected) 28.dp else 24.dp)
+                        modifier = Modifier.size(if (isSelected) 30.dp else 26.dp),
                     )
                 },
                 label = {
                     Text(
                         text = tab.label,
-                        color = if (isSelected) selectedColor else unselectedColor
+                        color = if (isSelected) selectedColor else unselectedColor,
                     )
                 },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = selectedColor,
-                    selectedTextColor = selectedColor,
-                    unselectedIconColor = unselectedColor,
-                    unselectedTextColor = unselectedColor,
-                    indicatorColor = Color.Transparent
-                )
+                colors =
+                    NavigationBarItemDefaults.colors(
+                        indicatorColor = selectedColor.copy(alpha = 0.12f),
+                        selectedIconColor = selectedColor,
+                        selectedTextColor = selectedColor,
+                        unselectedIconColor = unselectedColor,
+                        unselectedTextColor = unselectedColor,
+                    ),
             )
         }
     }

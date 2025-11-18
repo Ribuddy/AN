@@ -254,7 +254,7 @@ fun MapApp(
                     modifier = Modifier.padding(paddingValues),
                 )
             }
-            BottomTab.FRIEND -> {
+            BottomTab.BUDDY -> {
                 val friendRepository = GlobalApplication.getFriendRepository(context)
                 val authRepository = GlobalApplication.getAuthRepository(context)
                 val friendViewModel =
@@ -512,17 +512,26 @@ private fun MapContent(
                     object : KakaoMapReadyCallback() {
                         override fun onMapReady(map: KakaoMap) {
                             kakaoMap = map
+                            isMapReady = true
+
+                            // 초기 카메라 위치 설정
                             setupMap(map, uiState.currentLocation)
 
-                            // 지도 클릭 리스너
-                            map.setOnMapClickListener { _, position, _, _ ->
-                                println("DEBUG: Map clicked at ${position.latitude}, ${position.longitude}")
-                                onMapClick(LocationData.fromLatLng(position))
+                            // 지도 클릭 리스너 설정
+                            map.setOnMapClickListener { _, latLng, _, _ ->
+                                val clickedLocation = LocationData(latLng.latitude, latLng.longitude)
+                                onMapClick(clickedLocation)
                             }
 
-                            // 지도 준비 완료 표시
-                            isMapReady = true
-                            println("DEBUG: Map is ready, setting isMapReady = true")
+                            // 초기 마커 및 경로 표시
+                            MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation)
+                            MapUtils.addTeamMarkers(map, uiState.markers)
+                            uiState.destination?.let { dest ->
+                                MapUtils.addDestinationMarker(map, dest)
+                            }
+                            uiState.route?.let { route ->
+                                MapUtils.drawRoute(map, route)
+                            }
                         }
                     },
                 )

@@ -31,7 +31,7 @@ enum class BottomTab(
 ) {
     MAP("지도"),
     REPORT("주행 리포트"),
-    FRIEND("친구"),
+    BUDDY("버디"),
     MY("MY"),
 }
 

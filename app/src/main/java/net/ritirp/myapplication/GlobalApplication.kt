@@ -15,6 +15,7 @@ import net.ritirp.myapplication.data.repository.CrashSettingsRepository
 import net.ritirp.myapplication.data.repository.FriendRepository
 import net.ritirp.myapplication.data.repository.MapRepository
 import net.ritirp.myapplication.data.repository.TeamRepository
+import net.ritirp.myapplication.data.repository.UserRepository
 import net.ritirp.myapplication.service.AppVisibilityObserver
 import net.ritirp.myapplication.service.CrashDetector
 import net.ritirp.myapplication.service.LocationUpdateManager
@@ -46,6 +47,9 @@ class GlobalApplication : Application() {
     lateinit var mapRepository: MapRepository
         private set
 
+    lateinit var userRepository: UserRepository
+        private set
+
     private lateinit var locationUpdateManager: LocationUpdateManager
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -54,6 +58,9 @@ class GlobalApplication : Application() {
         super.onCreate()
         // TODO: 운영 배포시 키는 NDK / CI Secret 등으로 분리 권장
         KakaoMapSdk.init(this, "45b6314dd164865c07d22932a73b65b0")
+
+        // RetrofitClient 초기화 (인증 토큰 인터셉터를 위해)
+        net.ritirp.myapplication.data.api.RetrofitClient.init(this)
 
         // 설정 저장소 초기화
         crashSettingsRepository = CrashSettingsRepository(this)
@@ -76,6 +83,9 @@ class GlobalApplication : Application() {
 
         // Map 저장소 초기화
         mapRepository = MapRepository(LocationServices.getFusedLocationProviderClient(this))
+
+        // 사용자 저장소 초기화
+        userRepository = UserRepository(this)
 
         // 위치 업데이트 매니저 초기화 (Application Scope에서 실행)
         locationUpdateManager =
@@ -141,6 +151,10 @@ class GlobalApplication : Application() {
 
         fun getMapRepository(context: Context): MapRepository {
             return (context.applicationContext as GlobalApplication).mapRepository
+        }
+
+        fun getUserRepository(context: Context): UserRepository {
+            return (context.applicationContext as GlobalApplication).userRepository
         }
     }
 }

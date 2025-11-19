@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import net.ritirp.myapplication.data.model.UserProfile
+import net.ritirp.myapplication.data.repository.AuthRepository
 import net.ritirp.myapplication.data.repository.UserRepository
 
 /**
@@ -18,6 +19,7 @@ data class MyUiState(
     val userProfile: UserProfile? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
+    val isLoggedOut: Boolean = false,
 )
 
 /**
@@ -25,6 +27,7 @@ data class MyUiState(
  */
 class MyViewModel(
     private val userRepository: UserRepository,
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MyUiState())
     val uiState: StateFlow<MyUiState> = _uiState.asStateFlow()
@@ -67,6 +70,28 @@ class MyViewModel(
     fun refreshProfile() {
         loadUserProfile()
     }
+
+    /**
+     * 로그아웃
+     */
+    fun logout() {
+        viewModelScope.launch {
+            try {
+                Log.d("MyViewModel", "로그아웃 시작")
+                authRepository.logout()
+                _uiState.value = _uiState.value.copy(
+                    isLoggedOut = true,
+                    userProfile = null,
+                )
+                Log.d("MyViewModel", "로그아웃 완료")
+            } catch (e: Exception) {
+                Log.e("MyViewModel", "로그아웃 실패", e)
+                _uiState.value = _uiState.value.copy(
+                    error = "로그아웃 실패: ${e.message}",
+                )
+            }
+        }
+    }
 }
 
 /**
@@ -74,11 +99,12 @@ class MyViewModel(
  */
 class MyViewModelFactory(
     private val userRepository: UserRepository,
+    private val authRepository: AuthRepository,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MyViewModel::class.java)) {
-            return MyViewModel(userRepository) as T
+            return MyViewModel(userRepository, authRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

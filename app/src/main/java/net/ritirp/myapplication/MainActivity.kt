@@ -146,6 +146,12 @@ fun AppNavigation(
                 onNavigateToTeamManagement = {
                     navController.navigate("team_management")
                 },
+                onLogout = {
+                    Log.d("AppNavigation", "로그아웃 - 로그인 화면으로 이동")
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true } // 모든 백스택 제거
+                    }
+                },
             )
         }
 
@@ -214,6 +220,7 @@ fun MapApp(
     viewModel: MapViewModel,
     onNavigateToCrashSettings: () -> Unit = {},
     onNavigateToTeamManagement: () -> Unit = {},
+    onLogout: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -270,6 +277,7 @@ fun MapApp(
                 net.ritirp.myapplication.presentation.screen.MyScreen(
                     onNavigateToCrashSettings = onNavigateToCrashSettings,
                     onNavigateToTeamManagement = onNavigateToTeamManagement,
+                    onLogout = onLogout,
                     modifier = Modifier.padding(paddingValues),
                 )
             }

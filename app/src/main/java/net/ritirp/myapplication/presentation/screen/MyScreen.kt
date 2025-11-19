@@ -38,13 +38,23 @@ fun MyScreen(
     modifier: Modifier = Modifier,
     onNavigateToCrashSettings: () -> Unit,
     onNavigateToTeamManagement: () -> Unit = {},
+    onLogout: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val userRepository = GlobalApplication.getUserRepository(context)
+    val authRepository = GlobalApplication.getAuthRepository(context)
     val viewModel: MyViewModel = viewModel(
-        factory = MyViewModelFactory(userRepository),
+        factory = MyViewModelFactory(userRepository, authRepository),
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // 로그아웃 완료 시 로그인 화면으로 이동
+    LaunchedEffect(uiState.isLoggedOut) {
+        if (uiState.isLoggedOut) {
+            Log.d("MyScreen", "로그아웃 완료, 로그인 화면으로 이동")
+            onLogout()
+        }
+    }
 
     LaunchedEffect(uiState.userProfile) {
         Log.d("MyScreen", "UI 상태 변경: name=${uiState.userProfile?.name}, id=${uiState.userProfile?.ribuddyId}, loading=${uiState.isLoading}")
@@ -66,7 +76,7 @@ fun MyScreen(
                 )
             },
             actions = {
-                IconButton(onClick = { /* TODO: 로그아웃 */ }) {
+                IconButton(onClick = { viewModel.logout() }) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                         contentDescription = "로그아웃",

@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import net.ritirp.myapplication.GlobalApplication
 import net.ritirp.myapplication.R
 import net.ritirp.myapplication.data.model.FriendInfo
@@ -55,8 +56,13 @@ fun FriendScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by remember { mutableStateOf(BuddyTab.FRIEND) }
     var showAddFriendDialog by remember { mutableStateOf(false) }
+    var showCreateTeamDialog by remember { mutableStateOf(false) }
+    var showLeaveTeamDialog by remember { mutableStateOf(false) }
+    var selectedTeamToLeave by remember { mutableStateOf<net.ritirp.myapplication.data.model.TeamInfo?>(null) }
 
     val context = LocalContext.current
+    val teamRepository = remember { GlobalApplication.getTeamRepository(context) }
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = modifier
@@ -111,8 +117,8 @@ fun FriendScreen(
                     .align(Alignment.BottomEnd)
                     .padding(16.dp),
                 onAddFriendClick = { showAddFriendDialog = true },
-                onCreateTeamClick = { /* TODO: 팀 생성 */ },
-                onInviteMemberClick = { /* TODO: 팀원 초대 */ },
+                onCreateTeamClick = { showCreateTeamDialog = true },
+                onLeaveTeamClick = { showLeaveTeamDialog = true },
                 selectedTab = selectedTab
             )
         }
@@ -125,6 +131,50 @@ fun FriendScreen(
             onConfirm = { ribuddyId ->
                 viewModel.addFriend(ribuddyId)
                 showAddFriendDialog = false
+            }
+        )
+    }
+
+    if (showCreateTeamDialog) {
+        CreateTeamDialog(
+            onDismiss = { showCreateTeamDialog = false },
+            onConfirm = { teamName, teamDescription ->
+                scope.launch {
+                    teamRepository.createTeam(
+                        name = teamName,
+                        description = teamDescription,
+                        members = emptyList(),
+                        isCrew = false
+                    ).onSuccess {
+                        showCreateTeamDialog = false
+                        // TODO: 팀 목록 새로고침
+                    }.onFailure {
+                        // TODO: 에러 처리
+                    }
+                }
+            }
+        )
+    }
+
+    if (showLeaveTeamDialog) {
+        LeaveTeamDialog(
+            onDismiss = {
+                showLeaveTeamDialog = false
+                selectedTeamToLeave = null
+            },
+            teamName = selectedTeamToLeave?.name ?: "",
+            onConfirm = {
+                selectedTeamToLeave?.let { team ->
+                    scope.launch {
+                        teamRepository.leaveTeam(team.id).onSuccess {
+                            showLeaveTeamDialog = false
+                            selectedTeamToLeave = null
+                            // TODO: 팀 목록 새로고침
+                        }.onFailure {
+                            // TODO: 에러 처리
+                        }
+                    }
+                }
             }
         )
     }
@@ -447,7 +497,7 @@ fun ExpandableFab(
     modifier: Modifier = Modifier,
     onAddFriendClick: () -> Unit,
     onCreateTeamClick: () -> Unit,
-    onInviteMemberClick: () -> Unit,
+    onLeaveTeamClick: () -> Unit,
     selectedTab: BuddyTab
 ) {
     var isExpanded by remember { mutableStateOf(false) }
@@ -504,7 +554,7 @@ fun ExpandableFab(
                     shadowElevation = 4.dp
                 ) {
                     Text(
-                        text = "팀원 초대",
+                        text = "친구 추가",
                         color = Color.White,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
@@ -513,15 +563,15 @@ fun ExpandableFab(
 
                 SmallFloatingActionButton(
                     onClick = {
-                        onInviteMemberClick()
+                        onAddFriendClick()
                         isExpanded = false
                     },
                     containerColor = Color(0xFF4285F4),
                     contentColor = Color.White
                 ) {
                     Icon(
-                        imageVector = Icons.Default.PersonAdd,
-                        contentDescription = "팀원 초대"
+                        imageVector = Icons.Default.PersonAddAlt,
+                        contentDescription = "친구 추가"
                     )
                 }
             }
@@ -587,7 +637,7 @@ fun ExpandableFab(
             }
         }
 
-        // 서브 버튼 3 - 친구 추가
+        // 서브 버튼 3 - 팀 나가기
         AnimatedVisibility(
             visible = isExpanded,
             enter = fadeIn(
@@ -620,11 +670,11 @@ fun ExpandableFab(
                 // 라벨
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF37474F),
+                    color = Color(0xFFD32F2F),
                     shadowElevation = 4.dp
                 ) {
                     Text(
-                        text = "친구 추가",
+                        text = "팀 나가기",
                         color = Color.White,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
@@ -633,15 +683,15 @@ fun ExpandableFab(
 
                 SmallFloatingActionButton(
                     onClick = {
-                        onAddFriendClick()
+                        onLeaveTeamClick()
                         isExpanded = false
                     },
-                    containerColor = Color(0xFF4285F4),
+                    containerColor = Color(0xFFD32F2F),
                     contentColor = Color.White
                 ) {
                     Icon(
-                        imageVector = Icons.Default.PersonAddAlt,
-                        contentDescription = "친구 추가"
+                        imageVector = Icons.Default.ExitToApp,
+                        contentDescription = "팀 나가기"
                     )
                 }
             }
@@ -705,6 +755,98 @@ fun AddFriendDialog(
                 enabled = ribuddyId.isNotBlank(),
             ) {
                 Text("추가")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("취소")
+            }
+        },
+    )
+}
+
+/**
+ * 팀 생성 다이얼로그
+ */
+@Composable
+fun CreateTeamDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (teamName: String, teamDescription: String) -> Unit,
+) {
+    var teamName by remember { mutableStateOf("") }
+    var teamDescription by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("팀 생성") },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                OutlinedTextField(
+                    value = teamName,
+                    onValueChange = { teamName = it },
+                    label = { Text("팀 이름") },
+                    placeholder = { Text("예: 라이버디") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = teamDescription,
+                    onValueChange = { teamDescription = it },
+                    label = { Text("팀 설명 (선택)") },
+                    placeholder = { Text("예: 함께 라이딩해요!") },
+                    maxLines = 3,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (teamName.isNotBlank()) {
+                        onConfirm(teamName.trim(), teamDescription.trim())
+                    }
+                },
+                enabled = teamName.isNotBlank(),
+            ) {
+                Text("생성")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("취소")
+            }
+        },
+    )
+}
+
+/**
+ * 팀 나가기 다이얼로그
+ */
+@Composable
+fun LeaveTeamDialog(
+    onDismiss: () -> Unit,
+    teamName: String,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("팀 나가기") },
+        text = {
+            Text(
+                text = "'$teamName' 팀에서 나가시겠습니까?\n나가면 다시 참여하려면 초대코드가 필요합니다.",
+                fontSize = 14.sp,
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = Color(0xFFD32F2F)
+                )
+            ) {
+                Text("나가기")
             }
         },
         dismissButton = {

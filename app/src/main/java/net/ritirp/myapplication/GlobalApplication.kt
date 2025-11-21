@@ -19,6 +19,7 @@ import net.ritirp.myapplication.data.repository.UserRepository
 import net.ritirp.myapplication.service.AppVisibilityObserver
 import net.ritirp.myapplication.service.CrashDetector
 import net.ritirp.myapplication.service.LocationUpdateManager
+import net.ritirp.myapplication.service.RidingMetricsTracker
 
 /**
  * Application 레벨 초기화.
@@ -27,6 +28,9 @@ import net.ritirp.myapplication.service.LocationUpdateManager
  */
 class GlobalApplication : Application() {
     lateinit var crashDetector: CrashDetector
+        private set
+
+    lateinit var ridingMetricsTracker: RidingMetricsTracker
         private set
 
     lateinit var crashSettingsRepository: CrashSettingsRepository
@@ -48,6 +52,9 @@ class GlobalApplication : Application() {
         private set
 
     lateinit var userRepository: UserRepository
+        private set
+
+    lateinit var ridingRecordRepository: net.ritirp.myapplication.data.repository.RidingRecordRepository
         private set
 
     private lateinit var locationUpdateManager: LocationUpdateManager
@@ -87,6 +94,13 @@ class GlobalApplication : Application() {
         // 사용자 저장소 초기화
         userRepository = UserRepository(this)
 
+        // 주행 기록 저장소 초기화
+        val database = net.ritirp.myapplication.data.local.RidingRecordDatabase.getDatabase(this)
+        ridingRecordRepository = net.ritirp.myapplication.data.repository.RidingRecordRepository(database.ridingRecordDao())
+
+        // 주행 통계 추적기 초기화 (LocationUpdateManager보다 먼저 초기화)
+        ridingMetricsTracker = RidingMetricsTracker(this)
+
         // 위치 업데이트 매니저 초기화 (Application Scope에서 실행)
         locationUpdateManager =
             LocationUpdateManager(
@@ -94,6 +108,7 @@ class GlobalApplication : Application() {
                 LocationServices.getFusedLocationProviderClient(this),
                 drivingRepository,
                 mapRepository,
+                ridingMetricsTracker,
             )
 
         // 사고 감지기 초기화
@@ -129,6 +144,10 @@ class GlobalApplication : Application() {
             return (context.applicationContext as GlobalApplication).crashDetector
         }
 
+        fun getRidingMetricsTracker(context: Context): RidingMetricsTracker {
+            return (context.applicationContext as GlobalApplication).ridingMetricsTracker
+        }
+
         fun getCrashSettingsRepository(context: Context): CrashSettingsRepository {
             return (context.applicationContext as GlobalApplication).crashSettingsRepository
         }
@@ -155,6 +174,10 @@ class GlobalApplication : Application() {
 
         fun getUserRepository(context: Context): UserRepository {
             return (context.applicationContext as GlobalApplication).userRepository
+        }
+
+        fun getRidingRecordRepository(context: Context): net.ritirp.myapplication.data.repository.RidingRecordRepository {
+            return (context.applicationContext as GlobalApplication).ridingRecordRepository
         }
     }
 }

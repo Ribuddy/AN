@@ -9,8 +9,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import net.ritirp.myapplication.data.model.LocationData
 import net.ritirp.myapplication.data.model.MarkerData
+import net.ritirp.myapplication.data.model.RidingMetrics
 import net.ritirp.myapplication.data.model.RouteData
 import net.ritirp.myapplication.data.repository.MapRepository
+import net.ritirp.myapplication.service.RidingMetricsTracker
 
 /**
  * 지도 화면의 UI 상태
@@ -40,6 +42,7 @@ enum class BottomTab(
  */
 class MapViewModel(
     private val mapRepository: MapRepository,
+    private val ridingMetricsTracker: RidingMetricsTracker? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
@@ -47,6 +50,10 @@ class MapViewModel(
     // 카메라 이동 이벤트를 위한 StateFlow 추가
     private val _cameraUpdateEvent = MutableStateFlow<LocationData?>(null)
     val cameraUpdateEvent: StateFlow<LocationData?> = _cameraUpdateEvent.asStateFlow()
+
+    // 주행 통계
+    private val _ridingMetrics = MutableStateFlow(RidingMetrics())
+    val ridingMetrics: StateFlow<RidingMetrics> = _ridingMetrics.asStateFlow()
 
     init {
         observeRepositoryData()
@@ -76,6 +83,15 @@ class MapViewModel(
         viewModelScope.launch {
             mapRepository.markers.collect { markers ->
                 _uiState.value = _uiState.value.copy(markers = markers)
+            }
+        }
+
+        // 주행 통계 관찰
+        ridingMetricsTracker?.let { tracker ->
+            viewModelScope.launch {
+                tracker.metrics.collect { metrics ->
+                    _ridingMetrics.value = metrics
+                }
             }
         }
     }
@@ -128,11 +144,12 @@ class MapViewModel(
  */
 class MapViewModelFactory(
     private val mapRepository: MapRepository,
+    private val ridingMetricsTracker: RidingMetricsTracker? = null,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MapViewModel::class.java)) {
-            return MapViewModel(mapRepository) as T
+            return MapViewModel(mapRepository, ridingMetricsTracker) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -12,12 +12,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import net.ritirp.myapplication.data.model.RidingMetrics
 import net.ritirp.myapplication.data.model.RidingStatus
 import net.ritirp.myapplication.data.model.TeamInfo
 import net.ritirp.myapplication.data.model.TeamMemberLocation
 import net.ritirp.myapplication.data.repository.DrivingRepository
 import net.ritirp.myapplication.data.repository.MapRepository
 import net.ritirp.myapplication.data.repository.TeamRepository
+import net.ritirp.myapplication.service.RidingMetricsTracker
 import kotlin.coroutines.resume
 
 /**
@@ -28,13 +30,34 @@ class TeamViewModel(
     private val drivingRepository: DrivingRepository,
     private val fusedLocationClient: FusedLocationProviderClient,
     private val mapRepository: MapRepository,
+    private val ridingMetricsTracker: RidingMetricsTracker? = null,
+    private val ridingRecordRepository: net.ritirp.myapplication.data.repository.RidingRecordRepository? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TeamUiState())
     val uiState: StateFlow<TeamUiState> = _uiState.asStateFlow()
 
+    private val _ridingMetrics = MutableStateFlow(RidingMetrics())
+    val ridingMetrics: StateFlow<RidingMetrics> = _ridingMetrics.asStateFlow()
+
+    private var currentTeamName: String? = null
+
     init {
         loadTeamList()
         observeRidingStatus()
+        observeRidingMetrics()
+    }
+
+    /**
+     * 주행 통계 관찰
+     */
+    private fun observeRidingMetrics() {
+        ridingMetricsTracker?.let { tracker ->
+            viewModelScope.launch {
+                tracker.metrics.collect { metrics ->
+                    _ridingMetrics.value = metrics
+                }
+            }
+        }
     }
 
     /**
@@ -427,11 +450,13 @@ class TeamViewModelFactory(
     private val drivingRepository: DrivingRepository,
     private val fusedLocationClient: FusedLocationProviderClient,
     private val mapRepository: MapRepository,
+    private val ridingMetricsTracker: RidingMetricsTracker? = null,
+    private val ridingRecordRepository: net.ritirp.myapplication.data.repository.RidingRecordRepository? = null,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TeamViewModel::class.java)) {
-            return TeamViewModel(teamRepository, drivingRepository, fusedLocationClient, mapRepository) as T
+            return TeamViewModel(teamRepository, drivingRepository, fusedLocationClient, mapRepository, ridingMetricsTracker, ridingRecordRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

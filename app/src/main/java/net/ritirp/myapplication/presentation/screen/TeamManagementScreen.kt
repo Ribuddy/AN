@@ -869,6 +869,7 @@ fun TeamJoinCodeDialog(
 fun TeamRidingMapScreen(
     teamName: String,
     teamMemberLocations: List<net.ritirp.myapplication.data.model.TeamMemberLocation>,
+    ridingMetrics: net.ritirp.myapplication.data.model.RidingMetrics? = null,
     onBack: () -> Unit,
     onEndRiding: () -> Unit,
     snackbarHostState: SnackbarHostState,
@@ -909,6 +910,16 @@ fun TeamRidingMapScreen(
                     Text(
                         text = "${memberLocation.memberName} (${memberLocation.distance}km)",
                         modifier = Modifier.padding(8.dp),
+                    )
+                }
+
+                // 주행 통계 바를 상단에 오버레이
+                ridingMetrics?.let { metrics ->
+                    net.ritirp.myapplication.presentation.components.RidingMetricsBar(
+                        metrics = metrics,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(16.dp),
                     )
                 }
             }

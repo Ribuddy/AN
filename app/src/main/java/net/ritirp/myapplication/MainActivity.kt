@@ -32,6 +32,7 @@ import com.kakao.vectormap.camera.CameraUpdateFactory
 import net.ritirp.myapplication.data.model.AuthState
 import net.ritirp.myapplication.data.model.CrashEvent
 import net.ritirp.myapplication.data.model.LocationData
+import net.ritirp.myapplication.data.model.RidingMetrics
 import net.ritirp.myapplication.data.repository.MapRepository
 import net.ritirp.myapplication.presentation.components.*
 import net.ritirp.myapplication.presentation.screen.CrashAlertScreen
@@ -47,13 +48,17 @@ import net.ritirp.myapplication.presentation.viewmodel.MapViewModelFactory
  * MVVM 패턴을 적용한 메인 액티비티
  */
 class MainActivity : ComponentActivity() {
-    private val mapRepository by lazy {
+    private val mapRepository: MapRepository by lazy {
         // GlobalApplication의 MapRepository 사용 (싱글톤)
         GlobalApplication.getMapRepository(this)
     }
 
+    private val ridingMetricsTracker: net.ritirp.myapplication.service.RidingMetricsTracker by lazy {
+        GlobalApplication.getRidingMetricsTracker(this)
+    }
+
     private val mapViewModel: MapViewModel by viewModels {
-        MapViewModelFactory(mapRepository)
+        MapViewModelFactory(mapRepository, ridingMetricsTracker)
     }
 
     private val loginViewModel: LoginViewModel by viewModels()
@@ -191,6 +196,8 @@ fun AppNavigation(
             val teamRepository = GlobalApplication.getTeamRepository(context)
             val drivingRepository = GlobalApplication.getDrivingRepository(context)
             val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+            val ridingMetricsTracker = GlobalApplication.getRidingMetricsTracker(context)
+            val ridingRecordRepository = GlobalApplication.getRidingRecordRepository(context)
             val teamViewModel =
                 androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.TeamViewModel>(
                     factory =
@@ -199,6 +206,8 @@ fun AppNavigation(
                             drivingRepository,
                             fusedLocationClient,
                             mapRepository,
+                            ridingMetricsTracker,
+                            ridingRecordRepository,
                         ),
                 )
             net.ritirp.myapplication.presentation.screen.TeamManagementScreen(
@@ -258,6 +267,17 @@ fun MapApp(
                     onMapClick = viewModel::onMapClicked,
                     onFollowToggle = viewModel::toggleFollowLocation,
                     onCurrentLocationClick = viewModel::getCurrentLocation,
+                    modifier = Modifier.padding(paddingValues),
+                )
+            }
+            BottomTab.REPORT -> {
+                val ridingRecordRepository = GlobalApplication.getRidingRecordRepository(context)
+                val ridingReportViewModel =
+                    androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.RidingReportViewModel>(
+                        factory = net.ritirp.myapplication.presentation.viewmodel.RidingReportViewModelFactory(ridingRecordRepository),
+                    )
+                net.ritirp.myapplication.presentation.screen.RidingReportScreen(
+                    viewModel = ridingReportViewModel,
                     modifier = Modifier.padding(paddingValues),
                 )
             }
@@ -431,6 +451,7 @@ private fun MapScreenContent(
             onFriendClick = { /* TODO: 친구 기능 */ },
         )
 
+
         CurrentLocationButton(
             isFollowing = uiState.isFollowingLocation,
             onClick = onCurrentLocationClick,
@@ -440,10 +461,34 @@ private fun MapScreenContent(
                     .padding(bottom = 120.dp, end = 20.dp),
         )
 
+        // 주행 통계 바 (라이딩 중일 때만 표시) - 화면 하단
+        viewModel?.let { vm ->
+            RidingMetricsOverlay(
+                viewModel = vm,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
+            )
+        }
+
         // 로딩 상태
         if (uiState.isLoading) {
             LoadingIndicator()
         }
+    }
+}
+
+@Composable
+private fun RidingMetricsOverlay(
+    viewModel: MapViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val ridingMetrics: RidingMetrics by viewModel.ridingMetrics.collectAsState()
+    if (ridingMetrics.totalDistance > 0 || ridingMetrics.durationInSeconds > 0) {
+        RidingMetricsBar(
+            metrics = ridingMetrics,
+            modifier = modifier,
+        )
     }
 }
 

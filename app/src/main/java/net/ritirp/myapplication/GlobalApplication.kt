@@ -57,6 +57,12 @@ class GlobalApplication : Application() {
     lateinit var ridingRecordRepository: net.ritirp.myapplication.data.repository.RidingRecordRepository
         private set
 
+    lateinit var localRidingRecordRepository: net.ritirp.myapplication.data.repository.LocalRidingRecordRepository
+        private set
+
+    lateinit var leanAngleSensorManager: net.ritirp.myapplication.service.LeanAngleSensorManager
+        private set
+
     private lateinit var locationUpdateManager: LocationUpdateManager
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -97,6 +103,12 @@ class GlobalApplication : Application() {
         // 주행 기록 저장소 초기화
         val database = net.ritirp.myapplication.data.local.RidingRecordDatabase.getDatabase(this)
         ridingRecordRepository = net.ritirp.myapplication.data.repository.RidingRecordRepository(database.ridingRecordDao())
+
+        // 로컬 주행 기록 저장소 초기화 (Room DB)
+        localRidingRecordRepository = net.ritirp.myapplication.data.repository.LocalRidingRecordRepository(this)
+
+        // 기울기 각도 센서 매니저 초기화
+        leanAngleSensorManager = net.ritirp.myapplication.service.LeanAngleSensorManager(this)
 
         // 주행 통계 추적기 초기화 (LocationUpdateManager보다 먼저 초기화)
         ridingMetricsTracker = RidingMetricsTracker(this)
@@ -178,6 +190,14 @@ class GlobalApplication : Application() {
 
         fun getRidingRecordRepository(context: Context): net.ritirp.myapplication.data.repository.RidingRecordRepository {
             return (context.applicationContext as GlobalApplication).ridingRecordRepository
+        }
+
+        fun getLocalRidingRecordRepository(context: Context): net.ritirp.myapplication.data.repository.LocalRidingRecordRepository {
+            return (context.applicationContext as GlobalApplication).localRidingRecordRepository
+        }
+
+        fun getLeanAngleSensorManager(context: Context): net.ritirp.myapplication.service.LeanAngleSensorManager {
+            return (context.applicationContext as GlobalApplication).leanAngleSensorManager
         }
     }
 }

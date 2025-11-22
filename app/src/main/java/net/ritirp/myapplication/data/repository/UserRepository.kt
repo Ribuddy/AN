@@ -31,14 +31,15 @@ class UserRepository(
                     val userData = apiResponse.result
                     Log.d("UserRepository", "API 응답 데이터: id=${userData?.id}, name=${userData?.name}, ribuddyId=${userData?.ribuddyId}")
                     if (userData != null) {
-                        val profile = UserProfile(
-                            id = userData.id,
-                            name = userData.name,
-                            nickname = userData.nickname,
-                            oneLineIntroduction = userData.introduction,
-                            ribuddyId = userData.ribuddyId,
-                            profileImage = userData.profileImageUrl,
-                        )
+                        val profile =
+                            UserProfile(
+                                id = userData.id,
+                                name = userData.name,
+                                nickname = userData.nickname,
+                                oneLineIntroduction = userData.introduction,
+                                ribuddyId = userData.ribuddyId,
+                                profileImage = userData.profileImageUrl,
+                            )
                         Log.d("UserRepository", "프로필 조회 성공: ${profile.name} (@${profile.ribuddyId})")
                         Log.d("UserRepository", "UserProfile 생성 완료: id=${profile.id}, name=${profile.name}, ribuddyId=${profile.ribuddyId}")
                         Result.success(profile)

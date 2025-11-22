@@ -35,15 +35,17 @@ fun RidingMetricsCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White,
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = Color.White,
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
         ) {
             Text(
                 text = "주행 통계",
@@ -167,12 +169,13 @@ private fun MetricItem(
     valueColor: Color = Color(0xFF1976D2),
 ) {
     Column(
-        modifier = modifier
-            .background(
-                color = Color(0xFFF5F5F5),
-                shape = RoundedCornerShape(12.dp),
-            )
-            .padding(12.dp),
+        modifier =
+            modifier
+                .background(
+                    color = Color(0xFFF5F5F5),
+                    shape = RoundedCornerShape(12.dp),
+                )
+                .padding(12.dp),
         horizontalAlignment = Alignment.Start,
     ) {
         Text(
@@ -231,15 +234,17 @@ fun RidingMetricsBar(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.95f),
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = Color.White.copy(alpha = 0.95f),
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {

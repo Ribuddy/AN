@@ -48,18 +48,23 @@ class MyViewModel(
             userRepository.getMyProfile()
                 .onSuccess { profile ->
                     Log.d("MyViewModel", "프로필 로드 성공: ${profile.name}, @${profile.ribuddyId}")
-                    _uiState.value = _uiState.value.copy(
-                        userProfile = profile,
-                        isLoading = false,
+                    _uiState.value =
+                        _uiState.value.copy(
+                            userProfile = profile,
+                            isLoading = false,
+                        )
+                    Log.d(
+                        "MyViewModel",
+                        "UI 상태 업데이트: name=${_uiState.value.userProfile?.name}, id=${_uiState.value.userProfile?.ribuddyId}",
                     )
-                    Log.d("MyViewModel", "UI 상태 업데이트: name=${_uiState.value.userProfile?.name}, id=${_uiState.value.userProfile?.ribuddyId}")
                 }
                 .onFailure { exception ->
                     Log.e("MyViewModel", "프로필 로드 실패: ${exception.message}", exception)
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = exception.message ?: "프로필 로드 실패",
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isLoading = false,
+                            error = exception.message ?: "프로필 로드 실패",
+                        )
                 }
         }
     }
@@ -79,16 +84,18 @@ class MyViewModel(
             try {
                 Log.d("MyViewModel", "로그아웃 시작")
                 authRepository.logout()
-                _uiState.value = _uiState.value.copy(
-                    isLoggedOut = true,
-                    userProfile = null,
-                )
+                _uiState.value =
+                    _uiState.value.copy(
+                        isLoggedOut = true,
+                        userProfile = null,
+                    )
                 Log.d("MyViewModel", "로그아웃 완료")
             } catch (e: Exception) {
                 Log.e("MyViewModel", "로그아웃 실패", e)
-                _uiState.value = _uiState.value.copy(
-                    error = "로그아웃 실패: ${e.message}",
-                )
+                _uiState.value =
+                    _uiState.value.copy(
+                        error = "로그아웃 실패: ${e.message}",
+                    )
             }
         }
     }

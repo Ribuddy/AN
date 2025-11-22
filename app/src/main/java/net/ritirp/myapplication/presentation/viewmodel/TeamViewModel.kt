@@ -226,18 +226,22 @@ class TeamViewModel(
      * 팀 정보 조회
      */
     fun getTeamInfo(teamId: String) {
+        android.util.Log.d("TeamViewModel", "getTeamInfo 호출: teamId=$teamId")
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             teamRepository.getTeamInfo(teamId)
                 .onSuccess { teamInfo ->
+                    android.util.Log.d("TeamViewModel", "팀 정보 조회 성공: ${teamInfo.name}, members=${teamInfo.members?.size}")
                     _uiState.value =
                         _uiState.value.copy(
                             selectedTeam = teamInfo,
                             isLoading = false,
                         )
+                    android.util.Log.d("TeamViewModel", "selectedTeam 설정 완료: ${_uiState.value.selectedTeam?.name}")
                 }
                 .onFailure { error ->
+                    android.util.Log.e("TeamViewModel", "팀 정보 조회 실패: ${error.message}")
                     _uiState.value =
                         _uiState.value.copy(
                             error = error.message ?: "팀 정보 조회에 실패했습니다.",
@@ -456,7 +460,14 @@ class TeamViewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TeamViewModel::class.java)) {
-            return TeamViewModel(teamRepository, drivingRepository, fusedLocationClient, mapRepository, ridingMetricsTracker, ridingRecordRepository) as T
+            return TeamViewModel(
+                teamRepository,
+                drivingRepository,
+                fusedLocationClient,
+                mapRepository,
+                ridingMetricsTracker,
+                ridingRecordRepository,
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

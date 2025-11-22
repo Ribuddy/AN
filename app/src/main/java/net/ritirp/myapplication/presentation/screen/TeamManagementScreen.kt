@@ -1,7 +1,6 @@
 package net.ritirp.myapplication.presentation.screen
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -56,8 +55,14 @@ fun TeamManagementScreen(
         }
     }
 
+    // selectedTeam 변경 감지
+    LaunchedEffect(uiState.selectedTeam) {
+        android.util.Log.d("TeamManagementScreen", "selectedTeam 변경: ${uiState.selectedTeam?.name}")
+    }
+
     // 선택된 팀이 있으면 팀 상세 화면 표시
     if (uiState.selectedTeam != null) {
+        android.util.Log.d("TeamManagementScreen", "TeamDetailScreen 표시: ${uiState.selectedTeam!!.name}")
         TeamDetailScreen(
             team = uiState.selectedTeam!!,
             joinCode = uiState.teamJoinCode,
@@ -253,12 +258,10 @@ fun TeamCard(
     var showLeaveDialog by remember { mutableStateOf(false) }
 
     Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        onClick = onClick,
     ) {
         Row(
             modifier =
@@ -917,9 +920,10 @@ fun TeamRidingMapScreen(
                 ridingMetrics?.let { metrics ->
                     net.ritirp.myapplication.presentation.components.RidingMetricsBar(
                         metrics = metrics,
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(16.dp),
+                        modifier =
+                            Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(16.dp),
                     )
                 }
             }

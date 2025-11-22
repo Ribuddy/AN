@@ -47,11 +47,12 @@ fun CrashSettingsScreen(
                         Icon(Icons.Default.ArrowBack, "뒤로가기", tint = Color(0xFF1F1F1F))
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.White,
-                    titleContentColor = Color(0xFF1F1F1F),
-                    navigationIconContentColor = Color(0xFF1F1F1F),
-                ),
+                colors =
+                    TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = Color.White,
+                        titleContentColor = Color(0xFF1F1F1F),
+                        navigationIconContentColor = Color(0xFF1F1F1F),
+                    ),
             )
         },
     ) { paddingValues ->

@@ -28,42 +28,45 @@ object RetrofitClient {
     /**
      * 인증 토큰을 자동으로 추가하는 인터셉터
      */
-    private val authInterceptor = Interceptor { chain ->
-        val originalRequest = chain.request()
+    private val authInterceptor =
+        Interceptor { chain ->
+            val originalRequest = chain.request()
 
-        // 토큰이 필요없는 엔드포인트 (로그인 등)
-        val noAuthPaths = listOf("/v1/auth/google/login", "/v1/auth/google/callback")
-        val requestPath = originalRequest.url.encodedPath
+            // 토큰이 필요없는 엔드포인트 (로그인 등)
+            val noAuthPaths = listOf("/v1/auth/google/login", "/v1/auth/google/callback")
+            val requestPath = originalRequest.url.encodedPath
 
-        if (noAuthPaths.any { requestPath.contains(it) }) {
-            return@Interceptor chain.proceed(originalRequest)
-        }
-
-        // DataStore에서 토큰 가져오기
-        val token = applicationContext?.let { context ->
-            runBlocking {
-                try {
-                    val dataStore = DataStoreManager.getDataStore(context)
-                    dataStore.data.first()[DataStoreManager.ACCESS_TOKEN_KEY]
-                } catch (e: Exception) {
-                    Log.e("RetrofitClient", "토큰 가져오기 실패", e)
-                    null
-                }
+            if (noAuthPaths.any { requestPath.contains(it) }) {
+                return@Interceptor chain.proceed(originalRequest)
             }
-        }
 
-        val newRequest = if (!token.isNullOrEmpty()) {
-            Log.d("RetrofitClient", "Authorization 헤더 추가: Bearer ${token.take(20)}...")
-            originalRequest.newBuilder()
-                .header("Authorization", "Bearer $token")
-                .build()
-        } else {
-            Log.w("RetrofitClient", "토큰이 없음, Authorization 헤더 없이 요청")
-            originalRequest
-        }
+            // DataStore에서 토큰 가져오기
+            val token =
+                applicationContext?.let { context ->
+                    runBlocking {
+                        try {
+                            val dataStore = DataStoreManager.getDataStore(context)
+                            dataStore.data.first()[DataStoreManager.ACCESS_TOKEN_KEY]
+                        } catch (e: Exception) {
+                            Log.e("RetrofitClient", "토큰 가져오기 실패", e)
+                            null
+                        }
+                    }
+                }
 
-        chain.proceed(newRequest)
-    }
+            val newRequest =
+                if (!token.isNullOrEmpty()) {
+                    Log.d("RetrofitClient", "Authorization 헤더 추가: Bearer ${token.take(20)}...")
+                    originalRequest.newBuilder()
+                        .header("Authorization", "Bearer $token")
+                        .build()
+                } else {
+                    Log.w("RetrofitClient", "토큰이 없음, Authorization 헤더 없이 요청")
+                    originalRequest
+                }
+
+            chain.proceed(newRequest)
+        }
 
     private val loggingInterceptor =
         HttpLoggingInterceptor().apply {
@@ -72,7 +75,7 @@ object RetrofitClient {
 
     private val okHttpClient =
         OkHttpClient.Builder()
-            .addInterceptor(authInterceptor)  // 인증 인터셉터 추가
+            .addInterceptor(authInterceptor) // 인증 인터셉터 추가
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)

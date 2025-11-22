@@ -16,7 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import net.ritirp.myapplication.data.local.RidingRecordEntity
+import net.ritirp.myapplication.data.local.entity.RidingRecordEntity
 import net.ritirp.myapplication.presentation.viewmodel.RidingReportViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -128,7 +128,7 @@ fun RidingReportScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.deleteRecord(record.id)
+                        viewModel.deleteRecord(record)
                         showDeleteDialog = null
                         if (selectedRecord?.id == record.id) {
                             selectedRecord = null
@@ -184,15 +184,15 @@ fun RidingRecordCard(
                 ) {
                     StatItem(
                         icon = Icons.Default.Place,
-                        value = String.format("%.2f km", record.totalDistance / 1000),
+                        value = String.format(java.util.Locale.getDefault(), "%.2f km", record.distanceMeters / 1000),
                     )
                     StatItem(
                         icon = Icons.Default.Timer,
-                        value = formatDuration(record.duration),
+                        value = formatDuration(record.durationMillis / 1000),
                     )
                     StatItem(
                         icon = Icons.Default.Speed,
-                        value = String.format("%.1f km/h", record.topSpeed * 3.6f),
+                        value = String.format(java.util.Locale.getDefault(), "%.1f km/h", record.maxSpeedKmh),
                     )
                 }
 
@@ -306,7 +306,7 @@ fun RidingRecordDetailScreen(
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                         Text(
-                            text = "${formatTime(record.startTime)} - ${formatTime(record.endTime)}",
+                            text = "${formatTime(record.startTime)} - ${record.endTime?.let { formatTime(it) } ?: "진행중"}",
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
@@ -348,13 +348,13 @@ fun RidingRecordDetailScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        DetailStatRow("거리", String.format("%.2f km", record.totalDistance / 1000))
-                        DetailStatRow("시간", formatDuration(record.duration))
-                        DetailStatRow("최고 속도", String.format("%.1f km/h", record.topSpeed * 3.6f))
-                        DetailStatRow("평균 속도", String.format("%.1f km/h", record.averageSpeed * 3.6f))
-                        DetailStatRow("최대 기울기", String.format("%.1f°", record.maxLeanAngle))
-                        DetailStatRow("상승", String.format("%.1f m", record.totalClimb))
-                        DetailStatRow("하강", String.format("%.1f m", record.totalFall))
+                        DetailStatRow("거리", String.format(java.util.Locale.getDefault(), "%.2f km", record.distanceMeters / 1000))
+                        DetailStatRow("시간", formatDuration(record.durationMillis / 1000))
+                        DetailStatRow("최고 속도", String.format(java.util.Locale.getDefault(), "%.1f km/h", record.maxSpeedKmh))
+                        DetailStatRow("평균 속도", String.format(java.util.Locale.getDefault(), "%.1f km/h", record.averageSpeedKmh))
+                        DetailStatRow("최대 기울기", String.format(java.util.Locale.getDefault(), "%.1f°", record.maxLeanAngleDegrees))
+                        DetailStatRow("상승", String.format(java.util.Locale.getDefault(), "%.1f m", record.totalClimbMeters))
+                        DetailStatRow("하강", String.format(java.util.Locale.getDefault(), "%.1f m", record.totalFallMeters))
                     }
                 }
             }
@@ -390,24 +390,28 @@ private fun formatDateTime(timestamp: Long): String {
     return sdf.format(Date(timestamp))
 }
 
-private fun formatDate(timestamp: Long): String {
+private fun formatDate(date: Date): String {
     val sdf = SimpleDateFormat("yyyy년 MM월 dd일", Locale.KOREA)
-    return sdf.format(Date(timestamp))
+    return sdf.format(date)
 }
 
-private fun formatTime(timestamp: Long): String {
+private fun formatTime(date: Date): String {
     val sdf = SimpleDateFormat("HH:mm", Locale.KOREA)
-    return sdf.format(Date(timestamp))
+    return sdf.format(date)
 }
 
-private fun formatDuration(millis: Long): String {
-    val seconds = millis / 1000
+private fun formatDateTime(date: Date): String {
+    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.KOREA)
+    return sdf.format(date)
+}
+
+private fun formatDuration(seconds: Long): String {
     val hours = seconds / 3600
     val minutes = (seconds % 3600) / 60
     val secs = seconds % 60
 
     return when {
-        hours > 0 -> String.format("%d:%02d:%02d", hours, minutes, secs)
-        else -> String.format("%d:%02d", minutes, secs)
+        hours > 0 -> String.format(java.util.Locale.getDefault(), "%d:%02d:%02d", hours, minutes, secs)
+        else -> String.format(java.util.Locale.getDefault(), "%d:%02d", minutes, secs)
     }
 }

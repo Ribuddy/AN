@@ -7,33 +7,27 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import net.ritirp.myapplication.data.local.RidingRecordEntity
-import net.ritirp.myapplication.data.repository.RidingRecordRepository
+import net.ritirp.myapplication.data.local.entity.RidingRecordEntity
+import net.ritirp.myapplication.data.repository.LocalRidingRecordRepository
 
 /**
  * 주행 리포트 ViewModel
  */
 class RidingReportViewModel(
-    private val ridingRecordRepository: RidingRecordRepository,
+    private val localRidingRecordRepository: LocalRidingRecordRepository,
 ) : ViewModel() {
     val records: StateFlow<List<RidingRecordEntity>> =
-        ridingRecordRepository
-            .getAllRecords()
+        localRidingRecordRepository
+            .getCompletedRecords()
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
                 initialValue = emptyList(),
             )
 
-    fun deleteRecord(id: Long) {
+    fun deleteRecord(record: RidingRecordEntity) {
         viewModelScope.launch {
-            ridingRecordRepository.deleteRecord(id)
-        }
-    }
-
-    fun deleteAllRecords() {
-        viewModelScope.launch {
-            ridingRecordRepository.deleteAllRecords()
+            localRidingRecordRepository.deleteRecord(record)
         }
     }
 }
@@ -42,12 +36,12 @@ class RidingReportViewModel(
  * RidingReportViewModel Factory
  */
 class RidingReportViewModelFactory(
-    private val ridingRecordRepository: RidingRecordRepository,
+    private val localRidingRecordRepository: LocalRidingRecordRepository,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(RidingReportViewModel::class.java)) {
-            return RidingReportViewModel(ridingRecordRepository) as T
+            return RidingReportViewModel(localRidingRecordRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -159,17 +159,22 @@ class TeamRepository(private val context: Context) {
             Log.d("TeamRepository", "팀 정보 조회 요청: teamId=$teamId")
             val response = teamApi.getTeamInfo("Bearer $token", teamId)
 
+            Log.d("TeamRepository", "응답 코드: ${response.code()}, 성공 여부: ${response.isSuccessful}")
+            Log.d("TeamRepository", "응답 바디: ${response.body()}")
+
             if (response.isSuccessful && response.body()?.isSuccess == true) {
                 val teamInfo = response.body()?.result
                 if (teamInfo != null) {
-                    Log.d("TeamRepository", "팀 정보 조회 성공: ${teamInfo.name}")
+                    Log.d("TeamRepository", "팀 정보 조회 성공: name=${teamInfo.name}, members=${teamInfo.members?.size}")
                     Result.success(teamInfo)
                 } else {
+                    Log.e("TeamRepository", "팀 정보가 null입니다")
                     Result.failure(Exception("팀 정보를 찾을 수 없습니다."))
                 }
             } else {
                 val errorMsg = response.body()?.message ?: "팀 정보 조회에 실패했습니다."
-                Log.e("TeamRepository", "팀 정보 조회 실패: $errorMsg")
+                val errorBody = response.errorBody()?.string()
+                Log.e("TeamRepository", "팀 정보 조회 실패: $errorMsg, errorBody: $errorBody")
                 Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {

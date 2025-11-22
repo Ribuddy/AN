@@ -271,10 +271,10 @@ fun MapApp(
                 )
             }
             BottomTab.REPORT -> {
-                val ridingRecordRepository = GlobalApplication.getRidingRecordRepository(context)
+                val localRidingRecordRepository = GlobalApplication.getLocalRidingRecordRepository(context)
                 val ridingReportViewModel =
                     androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.RidingReportViewModel>(
-                        factory = net.ritirp.myapplication.presentation.viewmodel.RidingReportViewModelFactory(ridingRecordRepository),
+                        factory = net.ritirp.myapplication.presentation.viewmodel.RidingReportViewModelFactory(localRidingRecordRepository),
                     )
                 net.ritirp.myapplication.presentation.screen.RidingReportScreen(
                     viewModel = ridingReportViewModel,
@@ -451,7 +451,6 @@ private fun MapScreenContent(
             onFriendClick = { /* TODO: 친구 기능 */ },
         )
 
-
         CurrentLocationButton(
             isFollowing = uiState.isFollowingLocation,
             onClick = onCurrentLocationClick,
@@ -465,9 +464,10 @@ private fun MapScreenContent(
         viewModel?.let { vm ->
             RidingMetricsOverlay(
                 viewModel = vm,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
             )
         }
 

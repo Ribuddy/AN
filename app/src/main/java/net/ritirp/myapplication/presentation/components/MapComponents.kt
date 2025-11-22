@@ -105,20 +105,22 @@ fun BottomNavigationBar(
         containerColor = Color.White,
         modifier = modifier,
     ) {
-        val items = listOf(
-            BottomTab.MAP,
-            BottomTab.REPORT,
-            BottomTab.BUDDY,
-            BottomTab.MY,
-        )
+        val items =
+            listOf(
+                BottomTab.MAP,
+                BottomTab.REPORT,
+                BottomTab.BUDDY,
+                BottomTab.MY,
+            )
 
         items.forEach { tab ->
-            val iconRes = when (tab) {
-                BottomTab.MAP -> R.drawable.ic_bottom_map
-                BottomTab.REPORT -> R.drawable.ic_bottom_report
-                BottomTab.BUDDY -> R.drawable.ic_bottom_buddy
-                BottomTab.MY -> R.drawable.ic_bottom_my
-            }
+            val iconRes =
+                when (tab) {
+                    BottomTab.MAP -> R.drawable.ic_bottom_map
+                    BottomTab.REPORT -> R.drawable.ic_bottom_report
+                    BottomTab.BUDDY -> R.drawable.ic_bottom_buddy
+                    BottomTab.MY -> R.drawable.ic_bottom_my
+                }
 
             val isSelected = currentTab == tab
             val selectedColor = Color(0xFF4285F4)

@@ -141,19 +141,27 @@ class RidingMetricsTracker(
 
         // 거리 계산
         lastLocation?.let { last ->
-            val distance = calculateDistance(
-                last.latitude,
-                last.longitude,
-                latitude,
-                longitude,
-            )
+            val distance =
+                calculateDistance(
+                    last.latitude,
+                    last.longitude,
+                    latitude,
+                    longitude,
+                )
 
             // 최소 거리 변화 이상인 경우만 누적 (정지 시 노이즈 방지)
             if (distance >= MIN_DISTANCE_CHANGE) {
-                _metrics.value = _metrics.value.copy(
-                    totalDistance = _metrics.value.totalDistance + distance,
+                _metrics.value =
+                    _metrics.value.copy(
+                        totalDistance = _metrics.value.totalDistance + distance,
+                    )
+                Log.d(
+                    TAG,
+                    "Distance updated: +${String.format(
+                        "%.2f",
+                        distance,
+                    )}m, Total: ${String.format("%.2f", _metrics.value.totalDistance)}m",
                 )
-                Log.d(TAG, "Distance updated: +${String.format("%.2f", distance)}m, Total: ${String.format("%.2f", _metrics.value.totalDistance)}m")
             }
 
             // 고도 변화 계산
@@ -161,14 +169,16 @@ class RidingMetricsTracker(
                 val altitudeChange = altitude - last.altitude
                 if (abs(altitudeChange) >= MIN_ALTITUDE_CHANGE) {
                     if (altitudeChange > 0) {
-                        _metrics.value = _metrics.value.copy(
-                            totalClimb = _metrics.value.totalClimb + altitudeChange,
-                        )
+                        _metrics.value =
+                            _metrics.value.copy(
+                                totalClimb = _metrics.value.totalClimb + altitudeChange,
+                            )
                         Log.d(TAG, "Climb: +${String.format("%.2f", altitudeChange)}m")
                     } else {
-                        _metrics.value = _metrics.value.copy(
-                            totalFall = _metrics.value.totalFall + abs(altitudeChange),
-                        )
+                        _metrics.value =
+                            _metrics.value.copy(
+                                totalFall = _metrics.value.totalFall + abs(altitudeChange),
+                            )
                         Log.d(TAG, "Fall: +${String.format("%.2f", abs(altitudeChange))}m")
                     }
                 }
@@ -231,9 +241,10 @@ class RidingMetricsTracker(
         val roll = Math.toDegrees(atan2(gy.toDouble(), gz.toDouble())).toFloat()
 
         // Pitch (전후 기울기)
-        val pitch = Math.toDegrees(
-            atan2(-gx.toDouble(), sqrt((gy * gy + gz * gz).toDouble())),
-        ).toFloat()
+        val pitch =
+            Math.toDegrees(
+                atan2(-gx.toDouble(), sqrt((gy * gy + gz * gz).toDouble())),
+            ).toFloat()
 
         // 현재 기울기 (절댓값의 최댓값)
         val currentLeanAngle = maxOf(abs(roll), abs(pitch))

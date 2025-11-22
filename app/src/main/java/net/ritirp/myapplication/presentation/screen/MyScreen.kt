@@ -43,9 +43,10 @@ fun MyScreen(
     val context = LocalContext.current
     val userRepository = GlobalApplication.getUserRepository(context)
     val authRepository = GlobalApplication.getAuthRepository(context)
-    val viewModel: MyViewModel = viewModel(
-        factory = MyViewModelFactory(userRepository, authRepository),
-    )
+    val viewModel: MyViewModel =
+        viewModel(
+            factory = MyViewModelFactory(userRepository, authRepository),
+        )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // 로그아웃 완료 시 로그인 화면으로 이동
@@ -61,9 +62,10 @@ fun MyScreen(
     }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.White)
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(Color.White),
     ) {
         // 상단 앱바
         TopAppBar(
@@ -84,9 +86,10 @@ fun MyScreen(
                     )
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.White,
-            ),
+            colors =
+                TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White,
+                ),
         )
 
         if (uiState.isLoading) {
@@ -98,9 +101,10 @@ fun MyScreen(
             }
         } else {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -137,12 +141,14 @@ private fun ProfileSection(
         Card(
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFEEF3FF),
-            ),
-            elevation = CardDefaults.cardElevation(
-                defaultElevation = 4.dp,
-            ),
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = Color(0xFFEEF3FF),
+                ),
+            elevation =
+                CardDefaults.cardElevation(
+                    defaultElevation = 4.dp,
+                ),
         ) {
             Row(
                 modifier = Modifier.padding(16.dp),
@@ -151,10 +157,11 @@ private fun ProfileSection(
             ) {
                 // 아바타
                 Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF4285F4)),
+                    modifier =
+                        Modifier
+                            .size(60.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF4285F4)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -201,7 +208,10 @@ private fun ProfileSection(
 }
 
 @Composable
-private fun MenuButton(icon: ImageVector, label: String) {
+private fun MenuButton(
+    icon: ImageVector,
+    label: String,
+) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -255,21 +265,25 @@ private fun StatItemCard(
     iconColor: Color,
 ) {
     Card(
-        modifier = Modifier
-            .width(100.dp)
-            .height(110.dp),
+        modifier =
+            Modifier
+                .width(100.dp)
+                .height(110.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White,
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 4.dp,
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = Color.White,
+            ),
+        elevation =
+            CardDefaults.cardElevation(
+                defaultElevation = 4.dp,
+            ),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -297,9 +311,7 @@ private fun StatItemCard(
 }
 
 @Composable
-private fun SettingsSection(
-    onNavigateToCrashSettings: () -> Unit,
-) {
+private fun SettingsSection(onNavigateToCrashSettings: () -> Unit) {
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -313,23 +325,26 @@ private fun SettingsSection(
         // 사고 감지 설정 버튼
         Card(
             onClick = onNavigateToCrashSettings,
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(
-                    width = 2.dp,
-                    color = Color(0xFF4285F4),
-                    shape = RoundedCornerShape(12.dp),
-                ),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .border(
+                        width = 2.dp,
+                        color = Color(0xFF4285F4),
+                        shape = RoundedCornerShape(12.dp),
+                    ),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.White,
-            ),
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = Color.White,
+                ),
             elevation = CardDefaults.cardElevation(0.dp),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {

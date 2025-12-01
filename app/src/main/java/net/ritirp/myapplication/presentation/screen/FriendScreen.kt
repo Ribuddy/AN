@@ -888,41 +888,91 @@ fun AddFriendDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("친구 추가") },
+        containerColor = Color(0xFFF8FBFF),
+        shape = RoundedCornerShape(20.dp),
+        title = {
+            Text(
+                text = "친구 추가",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+            )
+        },
         text = {
             Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
                     text = "추가할 친구의 라이버디 ID를 입력하세요",
                     fontSize = 14.sp,
                     color = Color.Gray,
                 )
-                OutlinedTextField(
-                    value = ribuddyId,
-                    onValueChange = { ribuddyId = it },
-                    label = { Text("라이버디 ID") },
-                    placeholder = { Text("예: ribuddy_official") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+
+                // 라이버디 ID 입력
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = "라이버디 ID",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF4285F4),
+                    )
+                    OutlinedTextField(
+                        value = ribuddyId,
+                        onValueChange = { ribuddyId = it },
+                        placeholder = { Text("예: ribuddy_official", color = Color.Gray) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFF4285F4),
+                            unfocusedBorderColor = Color(0xFFE0E0E0),
+                            focusedContainerColor = Color(0xFFF8F9FA),
+                            unfocusedContainerColor = Color(0xFFF8F9FA),
+                        ),
+                    )
+                }
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     if (ribuddyId.isNotBlank()) {
                         onConfirm(ribuddyId.trim())
                     }
                 },
                 enabled = ribuddyId.isNotBlank(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4285F4),
+                    disabledContainerColor = Color(0xFFE0E0E0),
+                ),
             ) {
-                Text("추가")
+                Text(
+                    text = "추가",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("취소")
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+            ) {
+                Text(
+                    text = "취소",
+                    fontSize = 16.sp,
+                    color = Color.Gray,
+                )
             }
         },
     )

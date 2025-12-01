@@ -56,8 +56,6 @@ fun FriendScreen(
     var selectedTab by remember { mutableStateOf(BuddyTab.FRIEND) }
     var showAddFriendDialog by remember { mutableStateOf(false) }
     var showCreateTeamDialog by remember { mutableStateOf(false) }
-    var showLeaveTeamDialog by remember { mutableStateOf(false) }
-    var selectedTeamToLeave by remember { mutableStateOf<net.ritirp.myapplication.data.model.TeamInfo?>(null) }
     var selectedTeam by remember { mutableStateOf<net.ritirp.myapplication.data.model.TeamInfo?>(null) }
 
     val context = LocalContext.current
@@ -113,6 +111,24 @@ fun FriendScreen(
                 }
             },
             snackbarHostState = snackbarHostState,
+            onLeaveTeam = {
+                scope.launch {
+                    val teamToLeave = selectedTeam
+                    teamToLeave?.let { team ->
+                        android.util.Log.d("FriendScreen", "팀 나가기 시도: ${team.name}, id=${team.id}")
+                        teamRepository.leaveTeam(team.id).onSuccess {
+                            android.util.Log.d("FriendScreen", "팀 나가기 성공: ${team.name}")
+                            // 팀 상세 화면 닫기
+                            selectedTeam = null
+                            teamJoinCode = null
+                            snackbarHostState.showSnackbar("'${team.name}' 팀에서 나갔습니다")
+                        }.onFailure { error ->
+                            android.util.Log.e("FriendScreen", "팀 나가기 실패: ${error.message}")
+                            snackbarHostState.showSnackbar("팀 나가기 실패: ${error.message}")
+                        }
+                    }
+                }
+            },
             onStartRiding = { teamId ->
                 android.util.Log.d("FriendScreen", "팀 라이딩 시작: teamId=$teamId")
                 scope.launch {
@@ -315,7 +331,6 @@ fun FriendScreen(
                         .padding(16.dp),
                 onAddFriendClick = { showAddFriendDialog = true },
                 onCreateTeamClick = { showCreateTeamDialog = true },
-                onLeaveTeamClick = { showLeaveTeamDialog = true },
                 selectedTab = selectedTab,
             )
         }
@@ -353,28 +368,6 @@ fun FriendScreen(
         )
     }
 
-    if (showLeaveTeamDialog) {
-        LeaveTeamDialog(
-            onDismiss = {
-                showLeaveTeamDialog = false
-                selectedTeamToLeave = null
-            },
-            teamName = selectedTeamToLeave?.name ?: "",
-            onConfirm = {
-                selectedTeamToLeave?.let { team ->
-                    scope.launch {
-                        teamRepository.leaveTeam(team.id).onSuccess {
-                            showLeaveTeamDialog = false
-                            selectedTeamToLeave = null
-                            // TODO: 팀 목록 새로고침
-                        }.onFailure {
-                            // TODO: 에러 처리
-                        }
-                    }
-                }
-            },
-        )
-    }
 }
 
 /**
@@ -710,7 +703,6 @@ fun ExpandableFab(
     modifier: Modifier = Modifier,
     onAddFriendClick: () -> Unit,
     onCreateTeamClick: () -> Unit,
-    onLeaveTeamClick: () -> Unit,
     selectedTab: BuddyTab,
 ) {
     var isExpanded by remember { mutableStateOf(false) }
@@ -867,73 +859,6 @@ fun ExpandableFab(
             }
         }
 
-        // 서브 버튼 3 - 팀 나가기
-        AnimatedVisibility(
-            visible = isExpanded,
-            enter =
-                fadeIn(
-                    animationSpec =
-                        spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium,
-                        ),
-                ) +
-                    expandVertically(
-                        animationSpec =
-                            spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessMedium,
-                            ),
-                    ),
-            exit =
-                fadeOut(
-                    animationSpec =
-                        spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMedium,
-                        ),
-                ) +
-                    shrinkVertically(
-                        animationSpec =
-                            spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMedium,
-                            ),
-                    ),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                // 라벨
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFFD32F2F),
-                    shadowElevation = 4.dp,
-                ) {
-                    Text(
-                        text = "팀 나가기",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    )
-                }
-
-                SmallFloatingActionButton(
-                    onClick = {
-                        onLeaveTeamClick()
-                        isExpanded = false
-                    },
-                    containerColor = Color(0xFFD32F2F),
-                    contentColor = Color.White,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ExitToApp,
-                        contentDescription = "팀 나가기",
-                    )
-                }
-            }
-        }
 
         // 메인 FAB (토글 버튼)
         FloatingActionButton(
@@ -1049,43 +974,6 @@ fun CreateTeamDialog(
                 enabled = teamName.isNotBlank(),
             ) {
                 Text("생성")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("취소")
-            }
-        },
-    )
-}
-
-/**
- * 팀 나가기 다이얼로그
- */
-@Composable
-fun LeaveTeamDialog(
-    onDismiss: () -> Unit,
-    teamName: String,
-    onConfirm: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("팀 나가기") },
-        text = {
-            Text(
-                text = "'$teamName' 팀에서 나가시겠습니까?\n나가면 다시 참여하려면 초대코드가 필요합니다.",
-                fontSize = 14.sp,
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onConfirm,
-                colors =
-                    ButtonDefaults.textButtonColors(
-                        contentColor = Color(0xFFD32F2F),
-                    ),
-            ) {
-                Text("나가기")
             }
         },
         dismissButton = {

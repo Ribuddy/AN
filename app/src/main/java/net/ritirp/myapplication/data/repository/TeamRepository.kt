@@ -100,7 +100,7 @@ class TeamRepository(private val context: Context) {
                 return Result.failure(Exception("로그인이 필요합니다."))
             }
 
-            val request = JoinOrLeaveTeamRequest(code = teamId)
+            val request = JoinTeamWithCodeRequest(code = teamId)
             Log.d("TeamRepository", "팀 참여 요청: teamId=$teamId")
             val response = teamApi.joinTeam("Bearer $token", request)
 
@@ -128,7 +128,7 @@ class TeamRepository(private val context: Context) {
                 return Result.failure(Exception("로그인이 필요합니다."))
             }
 
-            val request = JoinOrLeaveTeamRequest(code = teamId)
+            val request = JoinOrLeaveTeamRequest(id = teamId)
             Log.d("TeamRepository", "팀 탈퇴 요청: teamId=$teamId")
             val response = teamApi.leaveTeam("Bearer $token", request)
 

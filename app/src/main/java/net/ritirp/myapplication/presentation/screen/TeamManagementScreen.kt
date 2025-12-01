@@ -489,8 +489,10 @@ fun TeamDetailScreen(
     teamMemberLocations: List<net.ritirp.myapplication.data.model.TeamMemberLocation>,
     snackbarHostState: SnackbarHostState,
     onNavigateToMap: () -> Unit = {},
+    onLeaveTeam: () -> Unit = {},
 ) {
     var showJoinCodeDialog by remember { mutableStateOf(false) }
+    var showLeaveTeamDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -499,6 +501,15 @@ fun TeamDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "뒤로가기")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showLeaveTeamDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.ExitToApp,
+                            contentDescription = "팀 나가기",
+                            tint = Color(0xFFD32F2F),
+                        )
                     }
                 },
             )
@@ -677,6 +688,40 @@ fun TeamDetailScreen(
                 teamName = team.name,
                 joinCode = joinCode,
                 onDismiss = { showJoinCodeDialog = false },
+            )
+        }
+
+        // 팀 나가기 확인 다이얼로그
+        if (showLeaveTeamDialog) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showLeaveTeamDialog = false },
+                title = { Text("팀 나가기") },
+                text = {
+                    Text(
+                        text = "'${team.name}' 팀에서 나가시겠습니까?\n나가면 다시 참여하려면 초대코드가 필요합니다.",
+                        fontSize = 14.sp,
+                    )
+                },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(
+                        onClick = {
+                            showLeaveTeamDialog = false
+                            onLeaveTeam()
+                        },
+                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                            contentColor = Color(0xFFD32F2F),
+                        ),
+                    ) {
+                        Text("나가기")
+                    }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(
+                        onClick = { showLeaveTeamDialog = false },
+                    ) {
+                        Text("취소")
+                    }
+                },
             )
         }
     }

@@ -26,12 +26,12 @@ interface TeamApi {
     ): Response<ApiResponse<List<TeamInfo>>> // List로 변경 (배열을 직접 반환)
 
     /**
-     * 팀 참여하기
+     * 팀 참여하기 (참여 코드 사용)
      */
     @POST("v1/users/team/join")
     suspend fun joinTeam(
         @Header("Authorization") token: String,
-        @Body request: JoinOrLeaveTeamRequest,
+        @Body request: JoinTeamWithCodeRequest,
     ): Response<ApiResponse<Unit>>
 
     /**

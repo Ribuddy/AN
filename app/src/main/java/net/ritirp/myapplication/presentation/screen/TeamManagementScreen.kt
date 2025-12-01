@@ -363,43 +363,98 @@ fun CreateTeamDialog(
 ) {
     var teamName by remember { mutableStateOf("") }
     var teamDescription by remember { mutableStateOf("") }
-    var isCrew by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("새 팀 만들기") },
+        containerColor = Color(0xFFF8FBFF),
+        shape = RoundedCornerShape(20.dp),
+        title = {
+            Text(
+                text = "새 팀 만들기",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+            )
+        },
         text = {
             Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                OutlinedTextField(
-                    value = teamName,
-                    onValueChange = { teamName = it },
-                    label = { Text("팀 이름") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = teamDescription,
-                    onValueChange = { teamDescription = it },
-                    label = { Text("팀 설명 (선택사항)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 3,
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                // 팀 이름 입력
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Checkbox(
-                        checked = isCrew,
-                        onCheckedChange = { isCrew = it },
+                    Text(
+                        text = "팀 이름",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF4285F4),
                     )
-                    Text("크루로 설정")
+                    OutlinedTextField(
+                        value = teamName,
+                        onValueChange = { teamName = it },
+                        placeholder = { Text("팀 이름을 입력하세요", color = Color.Gray) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFF4285F4),
+                            unfocusedBorderColor = Color(0xFFE0E0E0),
+                            focusedContainerColor = Color(0xFFF8F9FA),
+                            unfocusedContainerColor = Color(0xFFF8F9FA),
+                        ),
+                    )
+                }
+
+                // 팀 설명 입력
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = "팀 설명 (선택사항)",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF4285F4),
+                        )
+                        Text(
+                            text = "선택",
+                            fontSize = 12.sp,
+                            color = Color(0xFF4285F4),
+                            modifier = Modifier
+                                .background(
+                                    Color(0xFFE8F0FE),
+                                    RoundedCornerShape(4.dp),
+                                )
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                        )
+                    }
+                    OutlinedTextField(
+                        value = teamDescription,
+                        onValueChange = { teamDescription = it },
+                        placeholder = { Text("팀 설명을 입력하세요", color = Color.Gray) },
+                        maxLines = 3,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFF4285F4),
+                            unfocusedBorderColor = Color(0xFFE0E0E0),
+                            focusedContainerColor = Color(0xFFF8F9FA),
+                            unfocusedContainerColor = Color(0xFFF8F9FA),
+                        ),
+                    )
                 }
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     if (teamName.isNotBlank()) {
                         onConfirm(
@@ -409,13 +464,35 @@ fun CreateTeamDialog(
                     }
                 },
                 enabled = teamName.isNotBlank(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4285F4),
+                    disabledContainerColor = Color(0xFFE0E0E0),
+                ),
             ) {
-                Text("생성")
+                Text(
+                    text = "생성",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("취소")
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+            ) {
+                Text(
+                    text = "취소",
+                    fontSize = 16.sp,
+                    color = Color.Gray,
+                )
             }
         },
     )

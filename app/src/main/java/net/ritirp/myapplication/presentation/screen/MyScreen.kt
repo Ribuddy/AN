@@ -20,9 +20,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import net.ritirp.myapplication.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import net.ritirp.myapplication.GlobalApplication
@@ -138,7 +140,7 @@ private fun ProfileSection(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(32.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // 왼쪽: 프로필 카드 (파란색)
@@ -202,7 +204,6 @@ private fun ProfileSection(
             }
         }
 
-        Spacer(modifier = Modifier.width(24.dp))
 
         // 오른쪽: 메뉴 버튼들 (빈 공간 가운데 배치)
         Column(
@@ -210,16 +211,16 @@ private fun ProfileSection(
             verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.Start,
         ) {
-            MenuButton(icon = Icons.Default.Notifications, label = "알림")
-            MenuButton(icon = Icons.Default.Build, label = "수정")
-            MenuButton(icon = Icons.Default.Info, label = "도움말")
+            MenuButton(iconRes = R.drawable.ic_bell, label = "알림")
+            MenuButton(iconRes = R.drawable.ic_modify, label = "수정")
+            MenuButton(iconRes = R.drawable.ic_help, label = "도움말")
         }
     }
 }
 
 @Composable
 private fun MenuButton(
-    icon: ImageVector,
+    iconRes: Int,
     label: String,
 ) {
     Row(
@@ -227,14 +228,14 @@ private fun MenuButton(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = icon,
+            painter = painterResource(id = iconRes),
             contentDescription = label,
             tint = Color(0xFF666666),
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(24.dp),
         )
         Text(
             text = label,
-            fontSize = 14.sp,
+            fontSize = 16.sp,
             color = Color(0xFF666666),
         )
     }

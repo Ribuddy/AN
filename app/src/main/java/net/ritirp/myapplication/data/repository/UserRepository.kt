@@ -61,4 +61,91 @@ class UserRepository(
             Result.failure(e)
         }
     }
+
+    /**
+     * 친구 수 조회 (프로필 정보에서 가져옴)
+     */
+    suspend fun getFriendCount(): Result<Int> {
+        return try {
+            Log.d("UserRepository", "친구 수 조회 시작")
+            val response = userApi.getMyProfile()
+
+            if (response.isSuccessful) {
+                val apiResponse = response.body()
+                if (apiResponse?.isSuccess == true) {
+                    val friendCount = apiResponse.result?.friends?.size ?: 0
+                    Log.d("UserRepository", "친구 수 조회 성공: $friendCount")
+                    Result.success(friendCount)
+                } else {
+                    Log.e("UserRepository", "친구 수 조회 실패: ${apiResponse?.message}")
+                    Result.failure(Exception(apiResponse?.message ?: "친구 수 조회 실패"))
+                }
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Log.e("UserRepository", "HTTP 에러: ${response.code()}, $errorBody")
+                Result.failure(Exception("친구 수 조회 실패: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Log.e("UserRepository", "친구 수 조회 중 예외 발생", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * 팀 수 조회 (프로필 정보에서 가져옴)
+     */
+    suspend fun getTeamCount(): Result<Int> {
+        return try {
+            Log.d("UserRepository", "팀 수 조회 시작")
+            val response = userApi.getMyProfile()
+
+            if (response.isSuccessful) {
+                val apiResponse = response.body()
+                if (apiResponse?.isSuccess == true) {
+                    val teamCount = apiResponse.result?.teamCount ?: 0
+                    Log.d("UserRepository", "팀 수 조회 성공: $teamCount")
+                    Result.success(teamCount)
+                } else {
+                    Log.e("UserRepository", "팀 수 조회 실패: ${apiResponse?.message}")
+                    Result.failure(Exception(apiResponse?.message ?: "팀 수 조회 실패"))
+                }
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Log.e("UserRepository", "HTTP 에러: ${response.code()}, $errorBody")
+                Result.failure(Exception("팀 수 조회 실패: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Log.e("UserRepository", "팀 수 조회 중 예외 발생", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * 주행 기록 수 조회 (프로필 정보에서 가져옴)
+     */
+    suspend fun getRidingRecordCount(): Result<Int> {
+        return try {
+            Log.d("UserRepository", "주행 기록 수 조회 시작")
+            val response = userApi.getMyProfile()
+
+            if (response.isSuccessful) {
+                val apiResponse = response.body()
+                if (apiResponse?.isSuccess == true) {
+                    val ridingRecordCount = apiResponse.result?.ridingRecords ?: 0
+                    Log.d("UserRepository", "주행 기록 수 조회 성공: $ridingRecordCount")
+                    Result.success(ridingRecordCount)
+                } else {
+                    Log.e("UserRepository", "주행 기록 수 조회 실패: ${apiResponse?.message}")
+                    Result.failure(Exception(apiResponse?.message ?: "주행 기록 수 조회 실패"))
+                }
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Log.e("UserRepository", "HTTP 에러: ${response.code()}, $errorBody")
+                Result.failure(Exception("주행 기록 수 조회 실패: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Log.e("UserRepository", "주행 기록 수 조회 중 예외 발생", e)
+            Result.failure(e)
+        }
+    }
 }

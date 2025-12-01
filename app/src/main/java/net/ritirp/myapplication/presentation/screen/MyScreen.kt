@@ -116,7 +116,11 @@ fun MyScreen(
                 )
 
                 // 통계 섹션
-                StatsSection()
+                StatsSection(
+                    friendCount = uiState.friendCount,
+                    teamCount = uiState.teamCount,
+                    ridingRecordCount = uiState.ridingRecordCount,
+                )
 
                 // 설정 섹션
                 SettingsSection(
@@ -139,7 +143,9 @@ private fun ProfileSection(
     ) {
         // 왼쪽: 프로필 카드 (파란색)
         Card(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .width(220.dp)
+                .height(140.dp),
             shape = RoundedCornerShape(16.dp),
             colors =
                 CardDefaults.cardColors(
@@ -151,24 +157,27 @@ private fun ProfileSection(
                 ),
         ) {
             Row(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // 아바타
+                // 아바타 (색상 반전)
                 Box(
                     modifier =
                         Modifier
-                            .size(60.dp)
+                            .size(90.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF4285F4)),
+                            .background(Color.White)
+                            .border(2.dp, Color(0xFF4285F4), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(36.dp),
+                        tint = Color(0xFF4285F4),
+                        modifier = Modifier.size(60.dp),
                     )
                 }
 
@@ -193,12 +202,13 @@ private fun ProfileSection(
             }
         }
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(24.dp))
 
-        // 오른쪽: 메뉴 버튼들 (카드 밖)
+        // 오른쪽: 메뉴 버튼들 (빈 공간 가운데 배치)
         Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalAlignment = Alignment.End,
+            modifier = Modifier.height(140.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.Start,
         ) {
             MenuButton(icon = Icons.Default.Notifications, label = "알림")
             MenuButton(icon = Icons.Default.Build, label = "수정")
@@ -213,44 +223,48 @@ private fun MenuButton(
     label: String,
 ) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = label,
             tint = Color(0xFF666666),
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(20.dp),
         )
         Text(
             text = label,
-            fontSize = 13.sp,
+            fontSize = 14.sp,
             color = Color(0xFF666666),
         )
     }
 }
 
 @Composable
-private fun StatsSection() {
+private fun StatsSection(
+    friendCount: Int = 0,
+    teamCount: Int = 0,
+    ridingRecordCount: Int = 0,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
         StatItemCard(
             icon = Icons.Default.Person,
-            count = "87",
+            count = friendCount.toString(),
             label = "버디",
             iconColor = Color(0xFF4285F4),
         )
         StatItemCard(
             icon = Icons.Default.Group,
-            count = "4",
+            count = teamCount.toString(),
             label = "팀",
             iconColor = Color(0xFF4285F4),
         )
         StatItemCard(
             icon = Icons.AutoMirrored.Filled.DirectionsBike,
-            count = "37",
+            count = ridingRecordCount.toString(),
             label = "주행기록",
             iconColor = Color(0xFF4285F4),
         )

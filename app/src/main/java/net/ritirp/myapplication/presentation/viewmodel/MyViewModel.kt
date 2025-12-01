@@ -17,6 +17,9 @@ import net.ritirp.myapplication.data.repository.UserRepository
  */
 data class MyUiState(
     val userProfile: UserProfile? = null,
+    val friendCount: Int = 0,
+    val teamCount: Int = 0,
+    val ridingRecordCount: Int = 0,
     val isLoading: Boolean = false,
     val error: String? = null,
     val isLoggedOut: Boolean = false,
@@ -48,9 +51,20 @@ class MyViewModel(
             userRepository.getMyProfile()
                 .onSuccess { profile ->
                     Log.d("MyViewModel", "프로필 로드 성공: ${profile.name}, @${profile.ribuddyId}")
+
+                    // 친구 수, 팀 수, 주행 기록 수 가져오기
+                    val friendCount = userRepository.getFriendCount().getOrNull() ?: 0
+                    val teamCount = userRepository.getTeamCount().getOrNull() ?: 0
+                    val ridingRecordCount = userRepository.getRidingRecordCount().getOrNull() ?: 0
+
+                    Log.d("MyViewModel", "통계 로드: 친구=$friendCount, 팀=$teamCount, 주행기록=$ridingRecordCount")
+
                     _uiState.value =
                         _uiState.value.copy(
                             userProfile = profile,
+                            friendCount = friendCount,
+                            teamCount = teamCount,
+                            ridingRecordCount = ridingRecordCount,
                             isLoading = false,
                         )
                     Log.d(

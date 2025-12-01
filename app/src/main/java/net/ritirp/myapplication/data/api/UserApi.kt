@@ -13,6 +13,18 @@ interface UserApi {
      */
     @GET("/v1/users/me")
     suspend fun getMyProfile(): Response<ApiResponse<UserProfileResponse>>
+
+    /**
+     * 친구 목록 조회
+     */
+    @GET("/v1/users/friends")
+    suspend fun getFriendList(): Response<ApiResponse<List<FriendResponse>>>
+
+    /**
+     * 팀 목록 조회
+     */
+    @GET("/v1/users/teams")
+    suspend fun getTeamList(): Response<ApiResponse<List<TeamResponse>>>
 }
 
 /**
@@ -27,5 +39,29 @@ data class UserProfileResponse(
     val profileImageUrl: String?,
     val createdAt: String?,
     val teams: List<String>?,
+    val teamCount: Int?,
     val ridingRecords: Int?,
+    val friends: List<FriendResponse>?,
+)
+
+/**
+ * 친구 응답 DTO
+ */
+data class FriendResponse(
+    val id: String,
+    val name: String,
+    val nickname: String?,
+    val ribuddyId: String,
+    val profileImageUrl: String?,
+    val isFavorite: Boolean?,
+)
+
+/**
+ * 팀 응답 DTO
+ */
+data class TeamResponse(
+    val id: String,
+    val name: String,
+    val description: String?,
+    val memberCount: Int?,
 )

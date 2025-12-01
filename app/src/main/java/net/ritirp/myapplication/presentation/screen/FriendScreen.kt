@@ -56,6 +56,7 @@ fun FriendScreen(
     var selectedTab by remember { mutableStateOf(BuddyTab.FRIEND) }
     var showAddFriendDialog by remember { mutableStateOf(false) }
     var showCreateTeamDialog by remember { mutableStateOf(false) }
+    var showJoinTeamDialog by remember { mutableStateOf(false) }
     var selectedTeam by remember { mutableStateOf<net.ritirp.myapplication.data.model.TeamInfo?>(null) }
 
     val context = LocalContext.current
@@ -331,6 +332,7 @@ fun FriendScreen(
                         .padding(16.dp),
                 onAddFriendClick = { showAddFriendDialog = true },
                 onCreateTeamClick = { showCreateTeamDialog = true },
+                onJoinTeamClick = { showJoinTeamDialog = true },
                 selectedTab = selectedTab,
             )
         }
@@ -359,15 +361,36 @@ fun FriendScreen(
                         isCrew = false,
                     ).onSuccess {
                         showCreateTeamDialog = false
-                        // TODO: 팀 목록 새로고침
-                    }.onFailure {
-                        // TODO: 에러 처리
+                        snackbarHostState.showSnackbar("팀이 생성되었습니다")
+                    }.onFailure { error ->
+                        snackbarHostState.showSnackbar("팀 생성 실패: ${error.message}")
                     }
                 }
             },
         )
     }
 
+    if (showJoinTeamDialog) {
+        JoinTeamDialog(
+            onDismiss = { showJoinTeamDialog = false },
+            onConfirm = { teamCode: String ->
+                scope.launch {
+                    teamRepository.joinTeam(teamCode)
+                        .onSuccess {
+                            showJoinTeamDialog = false
+                            snackbarHostState.showSnackbar("팀에 참여했습니다")
+                            // 팀 탭으로 전환
+                            selectedTab = BuddyTab.TEAM
+                        }
+                        .onFailure { error ->
+                            snackbarHostState.showSnackbar("팀 참여 실패: ${error.message}")
+                        }
+                }
+            },
+        )
+    }
+
+    SnackbarHost(hostState = snackbarHostState)
 }
 
 /**
@@ -703,6 +726,7 @@ fun ExpandableFab(
     modifier: Modifier = Modifier,
     onAddFriendClick: () -> Unit,
     onCreateTeamClick: () -> Unit,
+    onJoinTeamClick: () -> Unit,
     selectedTab: BuddyTab,
 ) {
     var isExpanded by remember { mutableStateOf(false) }
@@ -723,7 +747,7 @@ fun ExpandableFab(
         horizontalAlignment = Alignment.End,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // 서브 버튼 1 - 팀원 초대
+        // 서브 버튼 1 - 친구 추가
         AnimatedVisibility(
             visible = isExpanded,
             enter =
@@ -859,6 +883,73 @@ fun ExpandableFab(
             }
         }
 
+        // 서브 버튼 3 - 팀 참여
+        AnimatedVisibility(
+            visible = isExpanded,
+            enter =
+                fadeIn(
+                    animationSpec =
+                        spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium,
+                        ),
+                ) +
+                    expandVertically(
+                        animationSpec =
+                            spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMedium,
+                            ),
+                    ),
+            exit =
+                fadeOut(
+                    animationSpec =
+                        spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMedium,
+                        ),
+                ) +
+                    shrinkVertically(
+                        animationSpec =
+                            spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMedium,
+                            ),
+                    ),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                // 라벨
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF37474F),
+                    shadowElevation = 4.dp,
+                ) {
+                    Text(
+                        text = "팀 참여",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    )
+                }
+
+                SmallFloatingActionButton(
+                    onClick = {
+                        onJoinTeamClick()
+                        isExpanded = false
+                    },
+                    containerColor = Color(0xFF4285F4),
+                    contentColor = Color.White,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.GroupAdd,
+                        contentDescription = "팀 참여",
+                    )
+                }
+            }
+        }
 
         // 메인 FAB (토글 버튼)
         FloatingActionButton(

@@ -1,12 +1,14 @@
 package net.ritirp.myapplication.presentation.screen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.filled.Add
@@ -17,10 +19,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
+import net.ritirp.myapplication.R
 import net.ritirp.myapplication.data.model.TeamInfo
 import net.ritirp.myapplication.presentation.viewmodel.TeamViewModel
 
@@ -569,194 +574,194 @@ fun TeamDetailScreen(
     onLeaveTeam: () -> Unit = {},
 ) {
     var showJoinCodeDialog by remember { mutableStateOf(false) }
-    var showLeaveTeamDialog by remember { mutableStateOf(false) }
+    var showInviteFriendDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(team.name) },
+                title = {
+                    Text(
+                        text = team.name,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "뒤로가기")
                     }
                 },
-                actions = {
-                    IconButton(onClick = { showLeaveTeamDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.ExitToApp,
-                            contentDescription = "팀 나가기",
-                            tint = Color(0xFFD32F2F),
-                        )
-                    }
-                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White,
+                ),
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
+
             FloatingActionButton(
                 onClick = {
-                    showJoinCodeDialog = true
-                    onGetJoinCode()
+                    showInviteFriendDialog = true
                 },
+                containerColor = Color(0xFF4285F4),
+                contentColor = Color.White,
+                shape = RoundedCornerShape(16.dp),
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 8.dp,
+                    pressedElevation = 12.dp,
+                ),
             ) {
-                Icon(Icons.Default.Share, "팀원 초대")
+                Icon(
+                    imageVector = Icons.Default.PersonAdd,
+                    contentDescription = "팀원 초대",
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp),
+                )
             }
         },
+        floatingActionButtonPosition = FabPosition.End,
+        containerColor = Color(0xFFF5F5F5),
     ) { padding ->
         Column(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(padding),
+                    .padding(padding)
+                    .padding(horizontal = 16.dp),
         ) {
-            // 팀 정보 카드
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 팀 ID 카드
             Card(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    ),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFEFF3F8),
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Icon(
-                            imageVector = if (team.isCrew) Icons.Default.Star else Icons.Default.Groups,
-                            contentDescription = null,
-                            tint = if (team.isCrew) Color(0xFFFFD700) else MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                        Text(
-                            text = team.name,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    }
-                    team.description?.let { desc ->
-                        Text(
-                            text = desc,
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    }
+                    Text(
+                        text = "팀 ID",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = team.id,
+                        fontSize = 16.sp,
+                        color = Color.Gray,
+                    )
                 }
             }
 
-            // 팀 라이딩 시작/종료 버튼
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 팀 설명 카드
             Card(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor =
-                            when (ridingStatus) {
-                                net.ritirp.myapplication.data.model.RidingStatus.RIDING -> Color(0xFF4CAF50)
-                                else -> MaterialTheme.colorScheme.primary
-                            },
-                    ),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFEFF3F8),
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             ) {
-                Button(
-                    onClick = {
-                        when (ridingStatus) {
-                            net.ritirp.myapplication.data.model.RidingStatus.IDLE,
-                            net.ritirp.myapplication.data.model.RidingStatus.ENDED,
-                            -> {
-                                onStartRiding(team.id)
-                                // 라이딩 시작하면 메인 화면(지도)으로 이동
-                                onNavigateToMap()
-                            }
-                            net.ritirp.myapplication.data.model.RidingStatus.RIDING -> {
-                                onEndRiding()
-                            }
-                            else -> {}
-                        }
-                    },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor =
-                                when (ridingStatus) {
-                                    net.ritirp.myapplication.data.model.RidingStatus.RIDING -> Color(0xFFEF5350)
-                                    else -> MaterialTheme.colorScheme.primary
-                                },
-                        ),
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
                 ) {
-                    Icon(
-                        imageVector =
-                            when (ridingStatus) {
-                                net.ritirp.myapplication.data.model.RidingStatus.RIDING -> Icons.Default.Stop
-                                else -> Icons.Default.DirectionsBike
-                            },
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text =
-                            when (ridingStatus) {
-                                net.ritirp.myapplication.data.model.RidingStatus.RIDING -> "팀 라이딩 종료"
-                                else -> "팀 라이딩 시작"
-                            },
-                        fontSize = 18.sp,
+                        text = "팀 설명",
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = team.description ?: "설명이 없습니다",
+                        fontSize = 16.sp,
+                        color = Color.Gray,
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             // 팀원 목록 헤더
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "팀원 (${team.members?.size ?: 0}명)",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
+            Text(
+                text = "팀원 (${team.members?.size ?: 0}명)",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             // 팀원 목록
             if (team.members.isNullOrEmpty()) {
                 Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "팀원이 없습니다",
+                        fontSize = 14.sp,
                         color = Color.Gray,
                     )
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(team.members) { member ->
-                        TeamMemberCard(member = member)
+                        TeamMemberItem(member = member)
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 팀 탈퇴하기 버튼
+            Button(
+                onClick = { onLeaveTeam() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4285F4),
+                ),
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "팀 탈퇴하기",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(80.dp))
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
         // 팀 참여 코드 다이얼로그
@@ -768,39 +773,51 @@ fun TeamDetailScreen(
             )
         }
 
-        // 팀 나가기 확인 다이얼로그
-        if (showLeaveTeamDialog) {
-            androidx.compose.material3.AlertDialog(
-                onDismissRequest = { showLeaveTeamDialog = false },
-                title = { Text("팀 나가기") },
-                text = {
-                    Text(
-                        text = "'${team.name}' 팀에서 나가시겠습니까?\n나가면 다시 참여하려면 초대코드가 필요합니다.",
-                        fontSize = 14.sp,
-                    )
-                },
-                confirmButton = {
-                    androidx.compose.material3.TextButton(
-                        onClick = {
-                            showLeaveTeamDialog = false
-                            onLeaveTeam()
-                        },
-                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
-                            contentColor = Color(0xFFD32F2F),
-                        ),
-                    ) {
-                        Text("나가기")
-                    }
-                },
-                dismissButton = {
-                    androidx.compose.material3.TextButton(
-                        onClick = { showLeaveTeamDialog = false },
-                    ) {
-                        Text("취소")
-                    }
-                },
+        // 친구 초대 다이얼로그
+        if (showInviteFriendDialog) {
+            InviteFriendToTeamDialog(
+                teamId = team.id,
+                teamName = team.name,
+                onDismiss = { showInviteFriendDialog = false },
             )
         }
+    }
+
+        // 친구 초대 다이얼로그
+        if (showInviteFriendDialog) {
+            InviteFriendToTeamDialog(
+                teamId = team.id,
+                teamName = team.name,
+                onDismiss = { showInviteFriendDialog = false },
+            )
+        }
+}
+
+/**
+ * 팀원 아이템 (간단한 버전)
+ */
+@Composable
+fun TeamMemberItem(member: net.ritirp.myapplication.data.model.TeamMember) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        // 프로필 아이콘 (ic_buddy.xml 사용)
+        Icon(
+            painter = painterResource(id = R.drawable.ic_buddy),
+            contentDescription = null,
+            modifier = Modifier.size(40.dp),
+            tint = Color.Unspecified, // 원본 색상 유지
+        )
+
+        // 이름
+        Text(
+            text = member.name ?: member.nickname ?: "이름 없음",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.Black,
+        )
     }
 }
 
@@ -1163,11 +1180,232 @@ fun TeamMemberLocationCard(memberLocation: net.ritirp.myapplication.data.model.T
             // 라이딩 중 상태 아이콘
             if (memberLocation.isRiding) {
                 Icon(
-                    imageVector = Icons.Default.DirectionsBike,
+                    imageVector = Icons.AutoMirrored.Filled.DirectionsBike,
                     contentDescription = "라이딩 중",
                     tint = Color(0xFF4CAF50),
                 )
             }
         }
     }
+}
+
+/**
+ * 팀원 추가 다이얼로그 (친구 목록에서 선택)
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun InviteFriendToTeamDialog(
+    teamId: String,
+    teamName: String,
+    onDismiss: () -> Unit,
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val friendRepository = remember { net.ritirp.myapplication.GlobalApplication.getFriendRepository(context) }
+    val scope = rememberCoroutineScope()
+
+    var friends by remember { mutableStateOf<List<net.ritirp.myapplication.data.model.FriendInfo>>(emptyList()) }
+    var selectedFriends by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    // 친구 목록 로드
+    LaunchedEffect(Unit) {
+        friendRepository.getFriendList()
+            .onSuccess { friendList ->
+                friends = friendList.friends
+                isLoading = false
+            }
+            .onFailure {
+                isLoading = false
+            }
+    }
+
+    // 검색 필터링
+    val filteredFriends = remember(friends, searchQuery) {
+        if (searchQuery.isEmpty()) {
+            friends
+        } else {
+            friends.filter { friend ->
+                friend.name.contains(searchQuery, ignoreCase = true) ||
+                friend.nickname?.contains(searchQuery, ignoreCase = true) == true
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color.White,
+        shape = RoundedCornerShape(20.dp),
+        title = {
+            Text(
+                text = "팀원 추가",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 500.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                // 검색창
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("이름, 아이디 검색", color = Color.Gray) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF4285F4),
+                        unfocusedBorderColor = Color(0xFFE0E0E0),
+                        focusedContainerColor = Color(0xFFF8F9FA),
+                        unfocusedContainerColor = Color(0xFFF8F9FA),
+                    ),
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "검색",
+                            tint = Color.Gray,
+                        )
+                    },
+                )
+
+                HorizontalDivider(color = Color(0xFFE0E0E0))
+
+                Text(
+                    text = "친구",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                )
+
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFF4285F4))
+                    }
+                } else if (filteredFriends.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = if (searchQuery.isEmpty()) "친구가 없습니다" else "검색 결과가 없습니다",
+                            fontSize = 14.sp,
+                            color = Color.Gray,
+                        )
+                    }
+                } else {
+                    // 친구 목록
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 300.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(filteredFriends) { friend ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedFriends = if (selectedFriends.contains(friend.userId)) {
+                                            selectedFriends - friend.userId
+                                        } else {
+                                            selectedFriends + friend.userId
+                                        }
+                                    }
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                // 프로필 아이콘
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_buddy),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(40.dp),
+                                    tint = Color.Unspecified,
+                                )
+
+                                // 이름
+                                Text(
+                                    text = friend.nickname ?: friend.name,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.Black,
+                                    modifier = Modifier.weight(1f),
+                                )
+
+                                // 체크박스
+                                RadioButton(
+                                    selected = selectedFriends.contains(friend.userId),
+                                    onClick = {
+                                        selectedFriends = if (selectedFriends.contains(friend.userId)) {
+                                            selectedFriends - friend.userId
+                                        } else {
+                                            selectedFriends + friend.userId
+                                        }
+                                    },
+                                    colors = RadioButtonDefaults.colors(
+                                        selectedColor = Color(0xFF4285F4),
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    scope.launch {
+                        // TODO: 선택한 친구들을 팀에 초대하는 API 호출
+                        // 현재는 팀 ID와 선택된 친구 ID들만 로그 출력
+                        android.util.Log.d("InviteFriend", "팀 ID: $teamId, 선택된 친구: ${selectedFriends.joinToString()}")
+                        onDismiss()
+                    }
+                },
+                enabled = selectedFriends.isNotEmpty() && !isLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4285F4),
+                    disabledContainerColor = Color(0xFFE0E0E0),
+                ),
+            ) {
+                Text(
+                    text = "팀원 초대하기",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+            ) {
+                Text(
+                    text = "취소",
+                    fontSize = 16.sp,
+                    color = Color.Gray,
+                )
+            }
+        },
+    )
 }

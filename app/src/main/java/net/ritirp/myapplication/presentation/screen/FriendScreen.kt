@@ -33,6 +33,8 @@ import kotlinx.coroutines.launch
 import net.ritirp.myapplication.GlobalApplication
 import net.ritirp.myapplication.R
 import net.ritirp.myapplication.data.model.FriendInfo
+import net.ritirp.myapplication.data.model.RidingStatus
+import net.ritirp.myapplication.data.model.TeamInfo
 import net.ritirp.myapplication.presentation.viewmodel.FriendViewModel
 
 /**
@@ -52,12 +54,11 @@ fun FriendScreen(
     viewModel: FriendViewModel,
     modifier: Modifier = Modifier,
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by remember { mutableStateOf(BuddyTab.FRIEND) }
     var showAddFriendDialog by remember { mutableStateOf(false) }
     var showCreateTeamDialog by remember { mutableStateOf(false) }
     var showJoinTeamDialog by remember { mutableStateOf(false) }
-    var selectedTeam by remember { mutableStateOf<net.ritirp.myapplication.data.model.TeamInfo?>(null) }
+    var selectedTeam by remember { mutableStateOf<TeamInfo?>(null) }
 
     val context = LocalContext.current
     val teamRepository = remember { GlobalApplication.getTeamRepository(context) }
@@ -67,32 +68,25 @@ fun FriendScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // 센서에서 기울기 각도 수집
-    val currentLeanAngle by leanAngleSensorManager.leanAngle.collectAsStateWithLifecycle()
-
     // 라이딩 상태
-    var ridingStatus by remember { mutableStateOf(net.ritirp.myapplication.data.model.RidingStatus.IDLE) }
+    var ridingStatus by remember { mutableStateOf(RidingStatus.IDLE) }
     var currentRidingRecordId by remember { mutableStateOf<String?>(null) }
-    var currentLocalRecordId by remember { mutableStateOf<Long?>(null) } // 로컬 DB의 record ID
+    var currentLocalRecordId by remember { mutableStateOf<Long?>(null) }
     var teamJoinCode by remember { mutableStateOf<String?>(null) }
 
-    // 주행 중 데이터 수집 (5초마다)
+    // 주행 중 데이터 수집
     LaunchedEffect(ridingStatus, currentLocalRecordId) {
-        if (ridingStatus == net.ritirp.myapplication.data.model.RidingStatus.RIDING && currentLocalRecordId != null) {
-            // TODO: 실제 GPS 위치 추적은 LocationUpdateManager나 FusedLocationProviderClient 사용
-            // 지금은 테스트를 위해 시작 위치만 저장하고 주행 종료 시 통계 확인
-            android.util.Log.d("FriendScreen", "주행 데이터 수집 시작 (실제 GPS 연동 필요)")
+        if (ridingStatus == RidingStatus.RIDING && currentLocalRecordId != null) {
+            android.util.Log.d("FriendScreen", "주행 데이터 수집 시작")
         }
     }
 
-    // 팀 상세 화면이 표시되어야 하는 경우
+    // 팀 상세 화면
     if (selectedTeam != null) {
-        android.util.Log.d("FriendScreen", "TeamDetailScreen 표시: ${selectedTeam!!.name}")
         TeamDetailScreen(
             team = selectedTeam!!,
             joinCode = teamJoinCode,
             onBack = {
-                android.util.Log.d("FriendScreen", "팀 상세 화면에서 뒤로가기")
                 selectedTeam = null
                 teamJoinCode = null
             },
@@ -100,11 +94,9 @@ fun FriendScreen(
                 scope.launch {
                     teamRepository.getTeamJoinCode(selectedTeam!!.id)
                         .onSuccess { code ->
-                            android.util.Log.d("FriendScreen", "참여 코드 조회 성공: $code")
                             teamJoinCode = code
                         }
                         .onFailure { error ->
-                            android.util.Log.e("FriendScreen", "참여 코드 조회 실패: ${error.message}")
                             scope.launch {
                                 snackbarHostState.showSnackbar("참여 코드 조회 실패: ${error.message}")
                             }
@@ -114,30 +106,24 @@ fun FriendScreen(
             snackbarHostState = snackbarHostState,
             onLeaveTeam = {
                 scope.launch {
-                    val teamToLeave = selectedTeam
-                    teamToLeave?.let { team ->
-                        android.util.Log.d("FriendScreen", "팀 나가기 시도: ${team.name}, id=${team.id}")
-                        teamRepository.leaveTeam(team.id).onSuccess {
-                            android.util.Log.d("FriendScreen", "팀 나가기 성공: ${team.name}")
-                            // 팀 상세 화면 닫기
-                            selectedTeam = null
-                            teamJoinCode = null
-                            snackbarHostState.showSnackbar("'${team.name}' 팀에서 나갔습니다")
-                        }.onFailure { error ->
-                            android.util.Log.e("FriendScreen", "팀 나가기 실패: ${error.message}")
-                            snackbarHostState.showSnackbar("팀 나가기 실패: ${error.message}")
-                        }
+                    selectedTeam?.let { team ->
+                        teamRepository.leaveTeam(team.id)
+                            .onSuccess {
+                                selectedTeam = null
+                                teamJoinCode = null
+                                snackbarHostState.showSnackbar("'${team.name}' 팀에서 나갔습니다")
+                            }
+                            .onFailure { error ->
+                                snackbarHostState.showSnackbar("팀 나가기 실패: ${error.message}")
+                            }
                     }
                 }
             },
             onStartRiding = { teamId ->
-                android.util.Log.d("FriendScreen", "팀 라이딩 시작: teamId=$teamId")
                 scope.launch {
-                    // 현재 위치 가져오기 (실제로는 GPS에서 가져와야 함)
                     val lat = 37.5666102
                     val lon = 126.9783881
 
-                    // 1. 로컬 DB에 주행 기록 저장
                     localRidingRecordRepository.startRiding(
                         teamId = teamId,
                         teamName = selectedTeam?.name,
@@ -146,40 +132,26 @@ fun FriendScreen(
                         startEle = null,
                         startLocationName = "시작 위치",
                     ).onSuccess { localRecordId ->
-                        android.util.Log.d("FriendScreen", "로컬 DB에 주행 시작 저장 성공: localId=$localRecordId")
                         currentLocalRecordId = localRecordId
-                        ridingStatus = net.ritirp.myapplication.data.model.RidingStatus.RIDING
-
-                        // 센서 시작
+                        ridingStatus = RidingStatus.RIDING
                         leanAngleSensorManager.start()
-                        android.util.Log.d("FriendScreen", "기울기 센서 시작")
+                        snackbarHostState.showSnackbar("팀 라이딩이 시작되었습니다")
 
-                        snackbarHostState.showSnackbar("팀 라이딩이 시작되었습니다. (로컬 저장)")
-
-                        // 2. 서버에도 전송 시도 (선택적)
                         drivingRepository.startTeamRiding(teamId, lat, lon, null, "시작 위치")
                             .onSuccess { ridingRecordId ->
-                                android.util.Log.d("FriendScreen", "서버에 팀 라이딩 시작 전송 성공: $ridingRecordId")
                                 currentRidingRecordId = ridingRecordId
                             }
-                            .onFailure { error ->
-                                android.util.Log.e("FriendScreen", "서버 전송 실패 (로컬 저장만 됨): ${error.message}")
-                            }
                     }.onFailure { error ->
-                        android.util.Log.e("FriendScreen", "로컬 DB 저장 실패: ${error.message}")
                         snackbarHostState.showSnackbar("주행 시작 실패: ${error.message}")
                     }
                 }
             },
             onEndRiding = {
-                android.util.Log.d("FriendScreen", "팀 라이딩 종료")
                 currentLocalRecordId?.let { localRecordId ->
                     scope.launch {
-                        // 현재 위치 가져오기
                         val lat = 37.5666102
                         val lon = 126.9783881
 
-                        // 1. 로컬 DB에 주행 종료 저장
                         localRidingRecordRepository.endRiding(
                             recordId = localRecordId,
                             endLat = lat,
@@ -187,69 +159,16 @@ fun FriendScreen(
                             endEle = null,
                             endLocationName = "종료 위치",
                         ).onSuccess {
-                            android.util.Log.d("FriendScreen", "로컬 DB에 주행 종료 저장 성공")
-
-                            // 센서 중지
                             leanAngleSensorManager.stop()
-                            android.util.Log.d("FriendScreen", "기울기 센서 중지")
-
-                            // 저장된 데이터 확인
-                            val savedRecord = localRidingRecordRepository.getRecordById(localRecordId)
-                            savedRecord?.let { record ->
-                                val durationSeconds = record.durationMillis / 1000.0
-                                val distanceKm = record.distanceMeters / 1000.0
-
-                                android.util.Log.d(
-                                    "FriendScreen",
-                                    """
-                                    ========== 저장된 주행 기록 ==========
-                                    ID: ${record.id}
-                                    팀: ${record.teamName} (${record.teamId})
-                                    시작: ${record.startTime}
-                                    종료: ${record.endTime}
-                                    
-                                    📊 주행 통계:
-                                    - Distance (km): ${"%.2f".format(distanceKm)} km
-                                    - Duration (s): ${"%.0f".format(durationSeconds)} s
-                                    - Top Speed (km/h): ${"%.1f".format(record.maxSpeedKmh)} km/h
-                                    - Average Speed (km/h): ${"%.1f".format(record.averageSpeedKmh)} km/h
-                                    
-                                    ⛰️ 고도 정보:
-                                    - Climb (m): ${"%.1f".format(record.totalClimbMeters)} m
-                                    - Fall (m): ${"%.1f".format(record.totalFallMeters)} m
-                                    - Max Elevation: ${record.maxElevation?.let { "%.1f".format(it) } ?: "N/A"} m
-                                    - Min Elevation: ${record.minElevation?.let { "%.1f".format(it) } ?: "N/A"} m
-                                    
-                                    🏍️ 기울기 정보:
-                                    - Max Lean Angle (°): ${"%.1f".format(record.maxLeanAngleDegrees)}°
-                                    - Avg Lean Angle (°): ${"%.1f".format(record.avgLeanAngleDegrees)}°
-                                    
-                                    📍 경로:
-                                    - 경로 포인트: ${record.routePoints.size}개
-                                    - 시작: ${record.startLocationName ?: "N/A"}
-                                    - 종료: ${record.endLocationName ?: "N/A"}
-                                    =====================================
-                                    """.trimIndent(),
-                                )
-                            }
-
                             currentLocalRecordId = null
-                            ridingStatus = net.ritirp.myapplication.data.model.RidingStatus.IDLE
-                            snackbarHostState.showSnackbar("팀 라이딩이 종료되었습니다. (로컬 저장)")
+                            ridingStatus = RidingStatus.IDLE
+                            snackbarHostState.showSnackbar("팀 라이딩이 종료되었습니다")
 
-                            // 2. 서버에도 전송 시도 (선택적)
                             currentRidingRecordId?.let { serverRecordId ->
                                 drivingRepository.endTeamRiding(serverRecordId, lat, lon, null, "종료 위치")
-                                    .onSuccess {
-                                        android.util.Log.d("FriendScreen", "서버에 팀 라이딩 종료 전송 성공")
-                                        currentRidingRecordId = null
-                                    }
-                                    .onFailure { error ->
-                                        android.util.Log.e("FriendScreen", "서버 전송 실패 (로컬 저장만 됨): ${error.message}")
-                                    }
+                                    .onSuccess { currentRidingRecordId = null }
                             }
                         }.onFailure { error ->
-                            android.util.Log.e("FriendScreen", "로컬 DB 저장 실패: ${error.message}")
                             snackbarHostState.showSnackbar("주행 종료 저장 실패: ${error.message}")
                         }
                     }
@@ -257,18 +176,16 @@ fun FriendScreen(
             },
             ridingStatus = ridingStatus,
             teamMemberLocations = emptyList(),
-            onNavigateToMap = { /* TODO: 지도 화면으로 이동 */ },
+            onNavigateToMap = { },
         )
         return
     }
 
     Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(Color.White),
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.White),
     ) {
-        // 상단 앱바
         TopAppBar(
             title = {
                 Text(
@@ -278,45 +195,35 @@ fun FriendScreen(
                     color = Color.Black,
                 )
             },
-            colors =
-                TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
-                ),
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.White,
+            ),
         )
 
-        // 친구/팀 탭
         CustomTabRow(
             selectedTab = selectedTab,
             onTabSelected = { selectedTab = it },
         )
 
-        // 검색창
         SearchBar(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         )
 
-        // 컨텐츠
         Box(modifier = Modifier.weight(1f)) {
             when (selectedTab) {
                 BuddyTab.FRIEND -> {
-                    FriendListContent(
-                        viewModel = viewModel,
-                        onAddClick = { showAddFriendDialog = true },
-                    )
+                    FriendListContent(viewModel = viewModel)
                 }
                 BuddyTab.TEAM -> {
                     TeamListContent(
-                        onAddClick = { },
                         onTeamClick = { team ->
-                            android.util.Log.d("FriendScreen", "팀 선택됨: ${team.name}, id=${team.id}")
                             scope.launch {
                                 teamRepository.getTeamInfo(team.id)
                                     .onSuccess { teamInfo ->
-                                        android.util.Log.d("FriendScreen", "팀 정보 조회 성공, 상세 화면 표시")
                                         selectedTeam = teamInfo
                                     }
                                     .onFailure { error ->
-                                        android.util.Log.e("FriendScreen", "팀 정보 조회 실패: ${error.message}")
+                                        snackbarHostState.showSnackbar("팀 정보 조회 실패: ${error.message}")
                                     }
                             }
                         },
@@ -324,16 +231,13 @@ fun FriendScreen(
                 }
             }
 
-            // 확장 가능한 FAB
             ExpandableFab(
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(16.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
                 onAddFriendClick = { showAddFriendDialog = true },
                 onCreateTeamClick = { showCreateTeamDialog = true },
                 onJoinTeamClick = { showJoinTeamDialog = true },
-                selectedTab = selectedTab,
             )
         }
     }
@@ -379,7 +283,6 @@ fun FriendScreen(
                         .onSuccess {
                             showJoinTeamDialog = false
                             snackbarHostState.showSnackbar("팀에 참여했습니다")
-                            // 팀 탭으로 전환
                             selectedTab = BuddyTab.TEAM
                         }
                         .onFailure { error ->
@@ -393,30 +296,23 @@ fun FriendScreen(
     SnackbarHost(hostState = snackbarHostState)
 }
 
-/**
- * 커스텀 탭 로우 (친구/팀)
- */
 @Composable
 fun CustomTabRow(
     selectedTab: BuddyTab,
     onTabSelected: (BuddyTab) -> Unit,
 ) {
     Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // 친구 탭
         TabButton(
             text = "친구",
             isSelected = selectedTab == BuddyTab.FRIEND,
             onClick = { onTabSelected(BuddyTab.FRIEND) },
             modifier = Modifier.weight(1f),
         )
-
-        // 팀 탭
         TabButton(
             text = "팀",
             isSelected = selectedTab == BuddyTab.TEAM,
@@ -426,9 +322,6 @@ fun CustomTabRow(
     }
 }
 
-/**
- * 탭 버튼
- */
 @Composable
 fun TabButton(
     text: String,
@@ -439,11 +332,10 @@ fun TabButton(
     Button(
         onClick = onClick,
         modifier = modifier.height(44.dp),
-        colors =
-            ButtonDefaults.buttonColors(
-                containerColor = if (isSelected) Color(0xFF4285F4) else Color(0xFFF5F5F5),
-                contentColor = if (isSelected) Color.White else Color.Gray,
-            ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isSelected) Color(0xFF4285F4) else Color(0xFFF5F5F5),
+            contentColor = if (isSelected) Color.White else Color.Gray,
+        ),
         shape = RoundedCornerShape(12.dp),
     ) {
         Text(
@@ -454,9 +346,6 @@ fun TabButton(
     }
 }
 
-/**
- * 검색바 (간단한 버전)
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchBar(modifier: Modifier = Modifier) {
@@ -475,88 +364,80 @@ fun SearchBar(modifier: Modifier = Modifier) {
             )
         },
         shape = RoundedCornerShape(12.dp),
-        colors =
-            OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF4285F4),
-                unfocusedBorderColor = Color(0xFFE0E0E0),
-            ),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = Color(0xFF4285F4),
+            unfocusedBorderColor = Color(0xFFE0E0E0),
+        ),
         singleLine = true,
     )
 }
 
-/**
- * 친구 리스트 컨텐츠
- */
 @Composable
-fun FriendListContent(
-    viewModel: FriendViewModel,
-    onAddClick: () -> Unit,
-) {
+fun FriendListContent(viewModel: FriendViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    if (uiState.isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            CircularProgressIndicator(color = Color(0xFF4285F4))
-        }
-    } else if (uiState.friends.isEmpty()) {
-        // 빈 상태
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+    when {
+        uiState.isLoading -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Default.PersonAdd,
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp),
-                    tint = Color.Gray,
-                )
-                Text(
-                    text = "친구가 없습니다",
-                    fontSize = 16.sp,
-                    color = Color.Gray,
-                )
+                CircularProgressIndicator(color = Color(0xFF4285F4))
             }
         }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(uiState.filteredFriends) { friend ->
-                FriendListItem(
-                    friend = friend,
-                    onToggleFavorite = { viewModel.toggleFavorite(friend.userId, friend.isFavorite) },
-                    onDelete = { viewModel.deleteFriend(friend.userId) },
-                )
+        uiState.friends.isEmpty() -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PersonAdd,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.Gray,
+                    )
+                    Text(
+                        text = "친구가 없습니다",
+                        fontSize = 16.sp,
+                        color = Color.Gray,
+                    )
+                }
+            }
+        }
+        else -> {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(uiState.filteredFriends) { friend ->
+                    FriendListItem(
+                        friend = friend,
+                        onToggleFavorite = {
+                            viewModel.toggleFavorite(friend.userId, friend.isFavorite)
+                        },
+                        onDelete = {
+                            viewModel.deleteFriend(friend.userId)
+                        },
+                    )
+                }
             }
         }
     }
 }
 
-/**
- * 팀 리스트 컨텐츠
- */
 @Composable
-fun TeamListContent(
-    onAddClick: () -> Unit,
-    onTeamClick: (net.ritirp.myapplication.data.model.TeamInfo) -> Unit,
-) {
+fun TeamListContent(onTeamClick: (TeamInfo) -> Unit) {
     val context = LocalContext.current
     val teamRepository = remember { GlobalApplication.getTeamRepository(context) }
-    var teams by remember { mutableStateOf<List<net.ritirp.myapplication.data.model.TeamInfo>>(emptyList()) }
+    var teams by remember { mutableStateOf<List<TeamInfo>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // 팀 목록 로드
     LaunchedEffect(Unit) {
-        isLoading = true
         teamRepository.getTeamList()
             .onSuccess { teamList ->
                 teams = teamList
@@ -567,58 +448,55 @@ fun TeamListContent(
             }
     }
 
-    if (isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            CircularProgressIndicator(color = Color(0xFF4285F4))
-        }
-    } else if (teams.isEmpty()) {
-        // 빈 상태
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+    when {
+        isLoading -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Default.Groups,
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp),
-                    tint = Color.Gray,
-                )
-                Text(
-                    text = "팀이 없습니다",
-                    fontSize = 16.sp,
-                    color = Color.Gray,
-                )
+                CircularProgressIndicator(color = Color(0xFF4285F4))
             }
         }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(teams) { team ->
-                TeamListItem(
-                    team = team,
-                    onClick = {
-                        android.util.Log.d("FriendScreen", "팀 클릭: ${team.name}, id=${team.id}")
-                        onTeamClick(team)
-                    },
-                )
+        teams.isEmpty() -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Groups,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.Gray,
+                    )
+                    Text(
+                        text = "팀이 없습니다",
+                        fontSize = 16.sp,
+                        color = Color.Gray,
+                    )
+                }
+            }
+        }
+        else -> {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(teams) { team ->
+                    TeamListItem(
+                        team = team,
+                        onClick = { onTeamClick(team) },
+                    )
+                }
             }
         }
     }
 }
 
-/**
- * 친구 리스트 아이템
- */
 @Composable
 fun FriendListItem(
     friend: FriendInfo,
@@ -626,12 +504,11 @@ fun FriendListItem(
     onDelete: () -> Unit,
 ) {
     Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(Color.White, RoundedCornerShape(12.dp))
-                .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(12.dp))
-                .padding(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White, RoundedCornerShape(12.dp))
+            .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(12.dp))
+            .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -640,15 +517,12 @@ fun FriendListItem(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.weight(1f),
         ) {
-            // 프로필 아이콘
             Icon(
                 painter = painterResource(id = R.drawable.ic_buddy),
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
                 tint = Color.Unspecified,
             )
-
-            // 이름
             Column {
                 Text(
                     text = friend.nickname ?: friend.name,
@@ -668,77 +542,57 @@ fun FriendListItem(
     }
 }
 
-/**
- * 팀 리스트 아이템
- */
 @Composable
 fun TeamListItem(
-    team: net.ritirp.myapplication.data.model.TeamInfo,
+    team: TeamInfo,
     onClick: () -> Unit = {},
 ) {
     Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(Color.White, RoundedCornerShape(12.dp))
-                .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(12.dp))
-                .clickable(onClick = onClick)
-                .padding(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White, RoundedCornerShape(12.dp))
+            .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.weight(1f),
-        ) {
-            // 팀 아이콘
-            Icon(
-                painter = painterResource(id = R.drawable.ic_group),
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = Color.Unspecified,
+        Icon(
+            painter = painterResource(id = R.drawable.ic_group),
+            contentDescription = null,
+            modifier = Modifier.size(48.dp),
+            tint = Color.Unspecified,
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = team.name,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.Black,
             )
-
-            // 팀 정보
-            Column {
-                Text(
-                    text = team.name,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.Black,
-                )
-                Text(
-                    text = "${team.members?.size ?: 0}명",
-                    fontSize = 13.sp,
-                    color = Color.Gray,
-                )
-            }
+            Text(
+                text = "${team.members?.size ?: 0}명",
+                fontSize = 13.sp,
+                color = Color.Gray,
+            )
         }
     }
 }
 
-/**
- * 확장 가능한 FAB 컴포넌트
- */
 @Composable
 fun ExpandableFab(
     modifier: Modifier = Modifier,
     onAddFriendClick: () -> Unit,
     onCreateTeamClick: () -> Unit,
     onJoinTeamClick: () -> Unit,
-    selectedTab: BuddyTab,
 ) {
     var isExpanded by remember { mutableStateOf(false) }
-
-    // 회전 애니메이션
     val rotationAngle by animateFloatAsState(
         targetValue = if (isExpanded) 45f else 0f,
-        animationSpec =
-            spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessLow,
-            ),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow,
+        ),
         label = "rotation",
     )
 
@@ -747,211 +601,55 @@ fun ExpandableFab(
         horizontalAlignment = Alignment.End,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // 서브 버튼 1 - 친구 추가
+        // 친구 추가
         AnimatedVisibility(
             visible = isExpanded,
-            enter =
-                fadeIn(
-                    animationSpec =
-                        spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium,
-                        ),
-                ) +
-                    expandVertically(
-                        animationSpec =
-                            spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessMedium,
-                            ),
-                    ),
-            exit =
-                fadeOut(
-                    animationSpec =
-                        spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMedium,
-                        ),
-                ) +
-                    shrinkVertically(
-                        animationSpec =
-                            spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMedium,
-                            ),
-                    ),
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                // 라벨
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF37474F),
-                    shadowElevation = 4.dp,
-                ) {
-                    Text(
-                        text = "친구 추가",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    )
-                }
-
-                SmallFloatingActionButton(
-                    onClick = {
-                        onAddFriendClick()
-                        isExpanded = false
-                    },
-                    containerColor = Color(0xFF4285F4),
-                    contentColor = Color.White,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PersonAddAlt,
-                        contentDescription = "친구 추가",
-                    )
-                }
-            }
+            FabButton(
+                label = "친구 추가",
+                icon = Icons.Default.PersonAddAlt,
+                onClick = {
+                    onAddFriendClick()
+                    isExpanded = false
+                },
+            )
         }
 
-        // 서브 버튼 2 - 팀 생성
+        // 팀 생성
         AnimatedVisibility(
             visible = isExpanded,
-            enter =
-                fadeIn(
-                    animationSpec =
-                        spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium,
-                        ),
-                ) +
-                    expandVertically(
-                        animationSpec =
-                            spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessMedium,
-                            ),
-                    ),
-            exit =
-                fadeOut(
-                    animationSpec =
-                        spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMedium,
-                        ),
-                ) +
-                    shrinkVertically(
-                        animationSpec =
-                            spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMedium,
-                            ),
-                    ),
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                // 라벨
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF37474F),
-                    shadowElevation = 4.dp,
-                ) {
-                    Text(
-                        text = "팀 생성",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    )
-                }
-
-                SmallFloatingActionButton(
-                    onClick = {
-                        onCreateTeamClick()
-                        isExpanded = false
-                    },
-                    containerColor = Color(0xFF4285F4),
-                    contentColor = Color.White,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Groups,
-                        contentDescription = "팀 생성",
-                    )
-                }
-            }
+            FabButton(
+                label = "팀 생성",
+                icon = Icons.Default.Groups,
+                onClick = {
+                    onCreateTeamClick()
+                    isExpanded = false
+                },
+            )
         }
 
-        // 서브 버튼 3 - 팀 참여
+        // 팀 참여
         AnimatedVisibility(
             visible = isExpanded,
-            enter =
-                fadeIn(
-                    animationSpec =
-                        spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessMedium,
-                        ),
-                ) +
-                    expandVertically(
-                        animationSpec =
-                            spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessMedium,
-                            ),
-                    ),
-            exit =
-                fadeOut(
-                    animationSpec =
-                        spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMedium,
-                        ),
-                ) +
-                    shrinkVertically(
-                        animationSpec =
-                            spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMedium,
-                            ),
-                    ),
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                // 라벨
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF37474F),
-                    shadowElevation = 4.dp,
-                ) {
-                    Text(
-                        text = "팀 참여",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    )
-                }
-
-                SmallFloatingActionButton(
-                    onClick = {
-                        onJoinTeamClick()
-                        isExpanded = false
-                    },
-                    containerColor = Color(0xFF4285F4),
-                    contentColor = Color.White,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.GroupAdd,
-                        contentDescription = "팀 참여",
-                    )
-                }
-            }
+            FabButton(
+                label = "팀 참여",
+                icon = Icons.Default.GroupAdd,
+                onClick = {
+                    onJoinTeamClick()
+                    isExpanded = false
+                },
+            )
         }
 
-        // 메인 FAB (토글 버튼)
+        // 메인 FAB
         FloatingActionButton(
             onClick = { isExpanded = !isExpanded },
             containerColor = Color(0xFF4285F4),
@@ -967,9 +665,41 @@ fun ExpandableFab(
     }
 }
 
-/**
- * 친구 추가 다이얼로그
- */
+@Composable
+private fun FabButton(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = Color(0xFF37474F),
+            shadowElevation = 4.dp,
+        ) {
+            Text(
+                text = label,
+                color = Color.White,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            )
+        }
+        SmallFloatingActionButton(
+            onClick = onClick,
+            containerColor = Color(0xFF4285F4),
+            contentColor = Color.White,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+            )
+        }
+    }
+}
+
 @Composable
 fun AddFriendDialog(
     onDismiss: () -> Unit,
@@ -999,11 +729,7 @@ fun AddFriendDialog(
                     fontSize = 14.sp,
                     color = Color.Gray,
                 )
-
-                // 라이버디 ID 입력
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = "라이버디 ID",
                         fontSize = 14.sp,
@@ -1035,9 +761,7 @@ fun AddFriendDialog(
                     }
                 },
                 enabled = ribuddyId.isNotBlank(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF4285F4),
@@ -1055,9 +779,7 @@ fun AddFriendDialog(
         dismissButton = {
             TextButton(
                 onClick = onDismiss,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
             ) {
                 Text(
                     text = "취소",
@@ -1069,9 +791,6 @@ fun AddFriendDialog(
     )
 }
 
-/**
- * 팀 생성 다이얼로그
- */
 @Composable
 fun CreateTeamDialog(
     onDismiss: () -> Unit,
@@ -1097,10 +816,7 @@ fun CreateTeamDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // 팀 이름 입력
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = "팀 이름",
                         fontSize = 14.sp,
@@ -1122,11 +838,7 @@ fun CreateTeamDialog(
                         ),
                     )
                 }
-
-                // 팀 설명 입력
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
@@ -1143,10 +855,7 @@ fun CreateTeamDialog(
                             fontSize = 12.sp,
                             color = Color(0xFF4285F4),
                             modifier = Modifier
-                                .background(
-                                    Color(0xFFE8F0FE),
-                                    RoundedCornerShape(4.dp),
-                                )
+                                .background(Color(0xFFE8F0FE), RoundedCornerShape(4.dp))
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
                         )
                     }
@@ -1155,9 +864,7 @@ fun CreateTeamDialog(
                         onValueChange = { teamDescription = it },
                         placeholder = { Text("팀 설명을 입력하세요", color = Color.Gray) },
                         maxLines = 3,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp),
+                        modifier = Modifier.fillMaxWidth().height(100.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFF4285F4),
@@ -1177,9 +884,7 @@ fun CreateTeamDialog(
                     }
                 },
                 enabled = teamName.isNotBlank(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF4285F4),
@@ -1197,9 +902,7 @@ fun CreateTeamDialog(
         dismissButton = {
             TextButton(
                 onClick = onDismiss,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
             ) {
                 Text(
                     text = "취소",

@@ -516,42 +516,89 @@ fun JoinTeamDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("팀 참여하기") },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+        containerColor = Color.White,
+        shape = RoundedCornerShape(16.dp),
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "참여할 팀의 ID를 입력하세요",
-                    fontSize = 14.sp,
-                    color = Color.Gray,
+                    text = "팀 ID로 참여하기",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
                 )
+                TextButton(
+                    onClick = onDismiss,
+                    contentPadding = PaddingValues(0.dp),
+                ) {
+                    Text(
+                        text = "취소",
+                        fontSize = 14.sp,
+                        color = Color.Gray,
+                    )
+                }
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 OutlinedTextField(
                     value = teamId,
                     onValueChange = { teamId = it },
-                    label = { Text("팀 ID") },
+                    placeholder = { Text("아이디 검색", color = Color.Gray, fontSize = 14.sp) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFFE0E0E0),
+                        unfocusedBorderColor = Color(0xFFE0E0E0),
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                    ),
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = {
+                        if (teamId.isNotBlank()) {
+                            onConfirm(teamId.trim())
+                        }
+                    },
+                    enabled = teamId.isNotBlank(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF4285F4),
+                        disabledContainerColor = Color(0xFFE0E0E0),
+                    ),
+                ) {
+                    Text(
+                        text = "검색",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White,
+                    )
+                }
             }
         },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    if (teamId.isNotBlank()) {
-                        onConfirm(teamId.trim())
-                    }
-                },
-                enabled = teamId.isNotBlank(),
-            ) {
-                Text("참여")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("취소")
-            }
-        },
+        confirmButton = {},
+        dismissButton = {},
     )
 }
 

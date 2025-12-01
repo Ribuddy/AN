@@ -79,6 +79,7 @@ fun TeamManagementScreen(
             ridingStatus = uiState.ridingStatus,
             teamMemberLocations = uiState.teamMemberLocations,
             onNavigateToMap = onNavigateToMap,
+            onLeaveTeam = { viewModel.leaveTeam(uiState.selectedTeam!!.id) },
         )
         return
     }
@@ -622,6 +623,7 @@ fun TeamDetailScreen(
 ) {
     var showJoinCodeDialog by remember { mutableStateOf(false) }
     var showInviteFriendDialog by remember { mutableStateOf(false) }
+    var showLeaveTeamDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -636,6 +638,15 @@ fun TeamDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "뒤로가기")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showLeaveTeamDialog = true }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ExitToApp,
+                            contentDescription = "팀 탈퇴",
+                            tint = Color(0xFFEF5350),
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -766,7 +777,9 @@ fun TeamDetailScreen(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 300.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(team.members) { member ->
@@ -777,37 +790,107 @@ fun TeamDetailScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 팀 탈퇴하기 버튼
-            Button(
-                onClick = { onLeaveTeam() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF4285F4),
-                ),
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
+            // 라이딩 시작/종료 버튼
+            if (ridingStatus == net.ritirp.myapplication.data.model.RidingStatus.IDLE) {
+                Button(
+                    onClick = { onStartRiding(team.id) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF34A853),
+                    ),
                 ) {
-                    Text(
-                        text = "팀 탈퇴하기",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp),
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.DirectionsBike,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "팀 라이딩 시작",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                        )
+                    }
+                }
+            } else {
+                // 라이딩 중일 때
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    // 지도 보기 버튼
+                    Button(
+                        onClick = onNavigateToMap,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4285F4),
+                        ),
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Map,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "지도 보기",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                            )
+                        }
+                    }
+
+                    // 라이딩 종료 버튼
+                    Button(
+                        onClick = onEndRiding,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFEF5350),
+                        ),
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Stop,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "라이딩 종료",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                            )
+                        }
+                    }
                 }
             }
-            Spacer(modifier = Modifier.height(80.dp))
+
             Spacer(modifier = Modifier.height(16.dp))
         }
 
@@ -828,16 +911,48 @@ fun TeamDetailScreen(
                 onDismiss = { showInviteFriendDialog = false },
             )
         }
-    }
 
-        // 친구 초대 다이얼로그
-        if (showInviteFriendDialog) {
-            InviteFriendToTeamDialog(
-                teamId = team.id,
-                teamName = team.name,
-                onDismiss = { showInviteFriendDialog = false },
+        // 팀 탈퇴 확인 다이얼로그
+        if (showLeaveTeamDialog) {
+            AlertDialog(
+                onDismissRequest = { showLeaveTeamDialog = false },
+                containerColor = Color.White,
+                shape = RoundedCornerShape(16.dp),
+                title = {
+                    Text(
+                        text = "팀 탈퇴",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
+                text = {
+                    Text(
+                        text = "정말 '${team.name}' 팀에서 탈퇴하시겠습니까?",
+                        fontSize = 16.sp,
+                        color = Color(0xFF666666),
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            onLeaveTeam()
+                            showLeaveTeamDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFEF5350),
+                        ),
+                    ) {
+                        Text("탈퇴", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showLeaveTeamDialog = false }) {
+                        Text("취소", color = Color(0xFF666666))
+                    }
+                },
             )
         }
+    }
 }
 
 /**

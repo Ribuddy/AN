@@ -44,7 +44,8 @@ fun CrashSettingsScreen(
                 title = { Text("사고 감지 설정") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, "뒤로가기", tint = Color(0xFF1F1F1F))
+                        Icon(Icons.Default.ArrowBack,
+                            "뒤로가기", tint = Color(0xFF1F1F1F))
                     }
                 },
                 colors =

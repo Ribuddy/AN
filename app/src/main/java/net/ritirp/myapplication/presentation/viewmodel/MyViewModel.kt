@@ -23,6 +23,9 @@ data class MyUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isLoggedOut: Boolean = false,
+    val isUpdatingRibuddyId: Boolean = false,
+    val updateSuccess: Boolean = false,
+    val updateError: String? = null,
 )
 
 /**
@@ -112,6 +115,56 @@ class MyViewModel(
                     )
             }
         }
+    }
+
+    /**
+     * 라이버디 ID 변경
+     */
+    fun updateRibuddyId(newRibuddyId: String) {
+        viewModelScope.launch {
+            try {
+                Log.d("MyViewModel", "라이버디 ID 변경 시작: $newRibuddyId")
+                _uiState.value = _uiState.value.copy(
+                    isUpdatingRibuddyId = true,
+                    updateSuccess = false,
+                    updateError = null,
+                )
+
+                userRepository.updateRibuddyId(newRibuddyId)
+                    .onSuccess {
+                        Log.d("MyViewModel", "라이버디 ID 변경 성공")
+                        _uiState.value = _uiState.value.copy(
+                            isUpdatingRibuddyId = false,
+                            updateSuccess = true,
+                        )
+                        // 프로필 새로고침
+                        loadUserProfile()
+                    }
+                    .onFailure { exception ->
+                        Log.e("MyViewModel", "라이버디 ID 변경 실패: ${exception.message}", exception)
+                        _uiState.value = _uiState.value.copy(
+                            isUpdatingRibuddyId = false,
+                            updateError = exception.message ?: "라이버디 ID 변경 실패",
+                        )
+                    }
+            } catch (e: Exception) {
+                Log.e("MyViewModel", "라이버디 ID 변경 중 예외 발생", e)
+                _uiState.value = _uiState.value.copy(
+                    isUpdatingRibuddyId = false,
+                    updateError = e.message ?: "알 수 없는 오류",
+                )
+            }
+        }
+    }
+
+    /**
+     * 업데이트 상태 초기화
+     */
+    fun clearUpdateStatus() {
+        _uiState.value = _uiState.value.copy(
+            updateSuccess = false,
+            updateError = null,
+        )
     }
 }
 

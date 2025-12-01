@@ -2,6 +2,7 @@ package net.ritirp.myapplication.data.repository
 
 import android.content.Context
 import android.util.Log
+import net.ritirp.myapplication.data.api.EditUserProfileRequest
 import net.ritirp.myapplication.data.api.RetrofitClient
 import net.ritirp.myapplication.data.model.UserProfile
 
@@ -145,6 +146,39 @@ class UserRepository(
             }
         } catch (e: Exception) {
             Log.e("UserRepository", "주행 기록 수 조회 중 예외 발생", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * 라이버디 ID 변경
+     */
+    suspend fun updateRibuddyId(newRibuddyId: String): Result<Unit> {
+        return try {
+            Log.d("UserRepository", "라이버디 ID 변경 시작: $newRibuddyId")
+            val request = EditUserProfileRequest(ribuddyId = newRibuddyId)
+            val response = userApi.editUserProfile(request)
+
+            Log.d("UserRepository", "응답 코드: ${response.code()}")
+
+            if (response.isSuccessful) {
+                val apiResponse = response.body()
+                Log.d("UserRepository", "응답 성공: ${apiResponse?.isSuccess}")
+
+                if (apiResponse?.isSuccess == true) {
+                    Log.d("UserRepository", "라이버디 ID 변경 성공")
+                    Result.success(Unit)
+                } else {
+                    Log.e("UserRepository", "라이버디 ID 변경 실패: ${apiResponse?.message}")
+                    Result.failure(Exception(apiResponse?.message ?: "라이버디 ID 변경 실패"))
+                }
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Log.e("UserRepository", "HTTP 에러: ${response.code()}, $errorBody")
+                Result.failure(Exception("라이버디 ID 변경 실패: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Log.e("UserRepository", "라이버디 ID 변경 중 예외 발생", e)
             Result.failure(e)
         }
     }

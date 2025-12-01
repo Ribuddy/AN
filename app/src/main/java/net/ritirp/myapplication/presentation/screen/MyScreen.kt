@@ -3,6 +3,7 @@ package net.ritirp.myapplication.presentation.screen
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,6 +15,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +54,7 @@ fun MyScreen(
             factory = MyViewModelFactory(userRepository, authRepository),
         )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showEditDialog by remember { mutableStateOf(false) }
 
     // 로그아웃 완료 시 로그인 화면으로 이동
     LaunchedEffect(uiState.isLoggedOut) {
@@ -61,6 +66,14 @@ fun MyScreen(
 
     LaunchedEffect(uiState.userProfile) {
         Log.d("MyScreen", "UI 상태 변경: name=${uiState.userProfile?.name}, id=${uiState.userProfile?.ribuddyId}, loading=${uiState.isLoading}")
+    }
+
+    // 라이버디 ID 변경 성공 시 다이얼로그 닫기
+    LaunchedEffect(uiState.updateSuccess) {
+        if (uiState.updateSuccess) {
+            showEditDialog = false
+            viewModel.clearUpdateStatus()
+        }
     }
 
     Column(
@@ -115,6 +128,7 @@ fun MyScreen(
                 ProfileSection(
                     name = uiState.userProfile?.nickname ?: uiState.userProfile?.name ?: "로딩 중...",
                     ribuddyId = uiState.userProfile?.ribuddyId ?: "",
+                    onEditClick = { showEditDialog = true },
                 )
 
                 // 통계 섹션
@@ -130,6 +144,22 @@ fun MyScreen(
                 )
             }
         }
+
+        // 라이버디 ID 변경 다이얼로그
+        if (showEditDialog) {
+            EditRibuddyIdDialog(
+                currentRibuddyId = uiState.userProfile?.ribuddyId ?: "",
+                isLoading = uiState.isUpdatingRibuddyId,
+                error = uiState.updateError,
+                onDismiss = {
+                    showEditDialog = false
+                    viewModel.clearUpdateStatus()
+                },
+                onConfirm = { newId ->
+                    viewModel.updateRibuddyId(newId)
+                }
+            )
+        }
     }
 }
 
@@ -137,6 +167,7 @@ fun MyScreen(
 private fun ProfileSection(
     name: String,
     ribuddyId: String,
+    onEditClick: () -> Unit = {},
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -211,9 +242,9 @@ private fun ProfileSection(
             verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.Start,
         ) {
-            MenuButton(iconRes = R.drawable.ic_bell, label = "알림")
-            MenuButton(iconRes = R.drawable.ic_modify, label = "수정")
-            MenuButton(iconRes = R.drawable.ic_help, label = "도움말")
+            MenuButton(iconRes = R.drawable.ic_bell, label = "알림", onClick = {})
+            MenuButton(iconRes = R.drawable.ic_modify, label = "수정", onClick = onEditClick)
+            MenuButton(iconRes = R.drawable.ic_help, label = "도움말", onClick = {})
         }
     }
 }
@@ -222,8 +253,12 @@ private fun ProfileSection(
 private fun MenuButton(
     iconRes: Int,
     label: String,
+    onClick: () -> Unit = {},
 ) {
     Row(
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -396,4 +431,103 @@ private fun SettingsSection(onNavigateToCrashSettings: () -> Unit) {
             }
         }
     }
+}
+
+/**
+ * 라이버디 ID 변경 다이얼로그
+ */
+@Composable
+private fun EditRibuddyIdDialog(
+    currentRibuddyId: String,
+    isLoading: Boolean,
+    error: String?,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var newRibuddyId by remember { mutableStateOf(currentRibuddyId) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "라이버디 ID 변경",
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = "새로운 라이버디 ID를 입력하세요",
+                    fontSize = 14.sp,
+                    color = Color(0xFF666666),
+                )
+
+                OutlinedTextField(
+                    value = newRibuddyId,
+                    onValueChange = { newRibuddyId = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isLoading,
+                    placeholder = { Text("예: ribuddy_user") },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF4285F4),
+                        unfocusedBorderColor = Color(0xFFCCCCCC),
+                    ),
+                )
+
+                if (error != null) {
+                    Text(
+                        text = error,
+                        color = Color.Red,
+                        fontSize = 12.sp,
+                    )
+                }
+
+                if (isLoading) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = Color(0xFF4285F4),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (newRibuddyId.isNotBlank() && newRibuddyId != currentRibuddyId) {
+                        onConfirm(newRibuddyId)
+                    }
+                },
+                enabled = !isLoading && newRibuddyId.isNotBlank() && newRibuddyId != currentRibuddyId,
+            ) {
+                Text(
+                    text = "변경",
+                    color = if (!isLoading && newRibuddyId.isNotBlank() && newRibuddyId != currentRibuddyId) {
+                        Color(0xFF4285F4)
+                    } else {
+                        Color(0xFFCCCCCC)
+                    },
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isLoading,
+            ) {
+                Text(
+                    text = "취소",
+                    color = if (!isLoading) Color(0xFF666666) else Color(0xFFCCCCCC),
+                )
+            }
+        },
+        containerColor = Color.White,
+    )
 }

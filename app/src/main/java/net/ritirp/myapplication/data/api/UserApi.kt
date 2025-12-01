@@ -2,7 +2,9 @@ package net.ritirp.myapplication.data.api
 
 import net.ritirp.myapplication.data.model.ApiResponse
 import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 
 /**
  * 사용자 API 인터페이스
@@ -25,7 +27,24 @@ interface UserApi {
      */
     @GET("/v1/users/teams")
     suspend fun getTeamList(): Response<ApiResponse<List<TeamResponse>>>
+
+    /**
+     * 사용자 정보 수정
+     */
+    @POST("/v1/users/edit")
+    suspend fun editUserProfile(@Body request: EditUserProfileRequest): Response<ApiResponse<Unit>>
 }
+
+/**
+ * 사용자 정보 수정 요청 DTO
+ */
+data class EditUserProfileRequest(
+    val name: String? = null,
+    val nickname: String? = null,
+    val oneLineIntroduction: String? = null,
+    val ribuddyId: String? = null,
+    val profileImage: String? = null,
+)
 
 /**
  * 사용자 프로필 응답 DTO

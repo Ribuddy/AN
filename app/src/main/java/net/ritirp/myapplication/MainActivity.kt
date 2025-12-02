@@ -8,6 +8,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -235,6 +237,24 @@ fun MapApp(
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
     val context = LocalContext.current // context 추가
 
+    // TeamViewModel 가져오기
+    val teamRepository = GlobalApplication.getTeamRepository(context)
+    val drivingRepository = GlobalApplication.getDrivingRepository(context)
+    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+    val mapRepository = GlobalApplication.getMapRepository(context)
+    val ridingMetricsTracker = GlobalApplication.getRidingMetricsTracker(context)
+    val ridingRecordRepository = GlobalApplication.getRidingRecordRepository(context)
+    val teamViewModel = androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.TeamViewModel>(
+        factory = net.ritirp.myapplication.presentation.viewmodel.TeamViewModelFactory(
+            teamRepository,
+            drivingRepository,
+            fusedLocationClient,
+            mapRepository,
+            ridingMetricsTracker,
+            ridingRecordRepository,
+        ),
+    )
+
     // 권한 요청
     LaunchedEffect(Unit) {
         if (!locationPermission.status.isGranted) {
@@ -264,6 +284,7 @@ fun MapApp(
                 MapScreen(
                     uiState = uiState,
                     viewModel = viewModel,
+                    teamViewModel = teamViewModel,
                     onMapClick = viewModel::onMapClicked,
                     onFollowToggle = viewModel::toggleFollowLocation,
                     onCurrentLocationClick = viewModel::getCurrentLocation,
@@ -315,6 +336,7 @@ fun MapApp(
 fun MapScreen(
     uiState: net.ritirp.myapplication.presentation.viewmodel.MapUiState,
     viewModel: MapViewModel,
+    teamViewModel: net.ritirp.myapplication.presentation.viewmodel.TeamViewModel,
     onMapClick: (LocationData) -> Unit,
     onFollowToggle: () -> Unit,
     onCurrentLocationClick: () -> Unit,
@@ -323,6 +345,7 @@ fun MapScreen(
     MapScreenContent(
         uiState = uiState,
         viewModel = viewModel,
+        teamViewModel = teamViewModel,
         onMapClick = onMapClick,
         onFollowToggle = onFollowToggle,
         onCurrentLocationClick = onCurrentLocationClick,
@@ -409,6 +432,7 @@ fun MapAppPreview() {
 private fun MapScreenContent(
     uiState: net.ritirp.myapplication.presentation.viewmodel.MapUiState,
     viewModel: MapViewModel? = null, // ViewModel 매개변수 추가
+    teamViewModel: net.ritirp.myapplication.presentation.viewmodel.TeamViewModel? = null,
     onMapClick: (LocationData) -> Unit,
     onFollowToggle: () -> Unit,
     onCurrentLocationClick: () -> Unit,
@@ -459,6 +483,31 @@ private fun MapScreenContent(
                     .align(Alignment.BottomEnd)
                     .padding(bottom = 120.dp, end = 20.dp),
         )
+
+        // 팀 라이딩 중단 버튼 (라이딩 중일 때만 표시) - 화면 상단 오른쪽
+        if (teamViewModel != null) {
+            val teamUiState by teamViewModel.uiState.collectAsStateWithLifecycle()
+
+            if (teamUiState.ridingStatus == net.ritirp.myapplication.data.model.RidingStatus.RIDING) {
+                Button(
+                    onClick = { teamViewModel.endRiding() },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 120.dp, end = 16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFEF5350),
+                    ),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Stop,
+                        contentDescription = null,
+                        tint = Color.White,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("라이딩 중단", color = Color.White)
+                }
+            }
+        }
 
         // 주행 통계 바 (라이딩 중일 때만 표시) - 화면 하단
         viewModel?.let { vm ->

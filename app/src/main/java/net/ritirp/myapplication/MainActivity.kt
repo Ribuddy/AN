@@ -8,6 +8,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,6 +34,7 @@ import com.kakao.vectormap.camera.CameraUpdateFactory
 import net.ritirp.myapplication.data.model.AuthState
 import net.ritirp.myapplication.data.model.CrashEvent
 import net.ritirp.myapplication.data.model.LocationData
+import net.ritirp.myapplication.data.model.RidingMetrics
 import net.ritirp.myapplication.data.repository.MapRepository
 import net.ritirp.myapplication.presentation.components.*
 import net.ritirp.myapplication.presentation.screen.CrashAlertScreen
@@ -47,13 +50,17 @@ import net.ritirp.myapplication.presentation.viewmodel.MapViewModelFactory
  * MVVM 패턴을 적용한 메인 액티비티
  */
 class MainActivity : ComponentActivity() {
-    private val mapRepository by lazy {
+    private val mapRepository: MapRepository by lazy {
         // GlobalApplication의 MapRepository 사용 (싱글톤)
         GlobalApplication.getMapRepository(this)
     }
 
+    private val ridingMetricsTracker: net.ritirp.myapplication.service.RidingMetricsTracker by lazy {
+        GlobalApplication.getRidingMetricsTracker(this)
+    }
+
     private val mapViewModel: MapViewModel by viewModels {
-        MapViewModelFactory(mapRepository)
+        MapViewModelFactory(mapRepository, ridingMetricsTracker)
     }
 
     private val loginViewModel: LoginViewModel by viewModels()
@@ -129,9 +136,6 @@ fun AppNavigation(
                 onGoogleLoginSuccess = { idToken, userName, userEmail ->
                     loginViewModel.handleOAuthCallback(idToken, userName, userEmail)
                 },
-                onKakaoLoginClick = {
-                    // TODO: 카카오 로그인 구현
-                },
                 authState = authState,
                 onLoginError = { errorMessage ->
                     loginViewModel.setError(errorMessage)
@@ -148,6 +152,12 @@ fun AppNavigation(
                 },
                 onNavigateToTeamManagement = {
                     navController.navigate("team_management")
+                },
+                onLogout = {
+                    Log.d("AppNavigation", "로그아웃 - 로그인 화면으로 이동")
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true } // 모든 백스택 제거
+                    }
                 },
             )
         }
@@ -188,6 +198,8 @@ fun AppNavigation(
             val teamRepository = GlobalApplication.getTeamRepository(context)
             val drivingRepository = GlobalApplication.getDrivingRepository(context)
             val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+            val ridingMetricsTracker = GlobalApplication.getRidingMetricsTracker(context)
+            val ridingRecordRepository = GlobalApplication.getRidingRecordRepository(context)
             val teamViewModel =
                 androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.TeamViewModel>(
                     factory =
@@ -196,6 +208,8 @@ fun AppNavigation(
                             drivingRepository,
                             fusedLocationClient,
                             mapRepository,
+                            ridingMetricsTracker,
+                            ridingRecordRepository,
                         ),
                 )
             net.ritirp.myapplication.presentation.screen.TeamManagementScreen(
@@ -217,10 +231,29 @@ fun MapApp(
     viewModel: MapViewModel,
     onNavigateToCrashSettings: () -> Unit = {},
     onNavigateToTeamManagement: () -> Unit = {},
+    onLogout: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
     val context = LocalContext.current // context 추가
+
+    // TeamViewModel 가져오기
+    val teamRepository = GlobalApplication.getTeamRepository(context)
+    val drivingRepository = GlobalApplication.getDrivingRepository(context)
+    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+    val mapRepository = GlobalApplication.getMapRepository(context)
+    val ridingMetricsTracker = GlobalApplication.getRidingMetricsTracker(context)
+    val ridingRecordRepository = GlobalApplication.getRidingRecordRepository(context)
+    val teamViewModel = androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.TeamViewModel>(
+        factory = net.ritirp.myapplication.presentation.viewmodel.TeamViewModelFactory(
+            teamRepository,
+            drivingRepository,
+            fusedLocationClient,
+            mapRepository,
+            ridingMetricsTracker,
+            ridingRecordRepository,
+        ),
+    )
 
     // 권한 요청
     LaunchedEffect(Unit) {
@@ -251,13 +284,25 @@ fun MapApp(
                 MapScreen(
                     uiState = uiState,
                     viewModel = viewModel,
+                    teamViewModel = teamViewModel,
                     onMapClick = viewModel::onMapClicked,
                     onFollowToggle = viewModel::toggleFollowLocation,
                     onCurrentLocationClick = viewModel::getCurrentLocation,
                     modifier = Modifier.padding(paddingValues),
                 )
             }
-            BottomTab.FRIEND -> {
+            BottomTab.REPORT -> {
+                val localRidingRecordRepository = GlobalApplication.getLocalRidingRecordRepository(context)
+                val ridingReportViewModel =
+                    androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.RidingReportViewModel>(
+                        factory = net.ritirp.myapplication.presentation.viewmodel.RidingReportViewModelFactory(localRidingRecordRepository),
+                    )
+                net.ritirp.myapplication.presentation.screen.RidingReportScreen(
+                    viewModel = ridingReportViewModel,
+                    modifier = Modifier.padding(paddingValues),
+                )
+            }
+            BottomTab.BUDDY -> {
                 val friendRepository = GlobalApplication.getFriendRepository(context)
                 val authRepository = GlobalApplication.getAuthRepository(context)
                 val friendViewModel =
@@ -273,6 +318,7 @@ fun MapApp(
                 net.ritirp.myapplication.presentation.screen.MyScreen(
                     onNavigateToCrashSettings = onNavigateToCrashSettings,
                     onNavigateToTeamManagement = onNavigateToTeamManagement,
+                    onLogout = onLogout,
                     modifier = Modifier.padding(paddingValues),
                 )
             }
@@ -290,6 +336,7 @@ fun MapApp(
 fun MapScreen(
     uiState: net.ritirp.myapplication.presentation.viewmodel.MapUiState,
     viewModel: MapViewModel,
+    teamViewModel: net.ritirp.myapplication.presentation.viewmodel.TeamViewModel,
     onMapClick: (LocationData) -> Unit,
     onFollowToggle: () -> Unit,
     onCurrentLocationClick: () -> Unit,
@@ -298,6 +345,7 @@ fun MapScreen(
     MapScreenContent(
         uiState = uiState,
         viewModel = viewModel,
+        teamViewModel = teamViewModel,
         onMapClick = onMapClick,
         onFollowToggle = onFollowToggle,
         onCurrentLocationClick = onCurrentLocationClick,
@@ -384,6 +432,7 @@ fun MapAppPreview() {
 private fun MapScreenContent(
     uiState: net.ritirp.myapplication.presentation.viewmodel.MapUiState,
     viewModel: MapViewModel? = null, // ViewModel 매개변수 추가
+    teamViewModel: net.ritirp.myapplication.presentation.viewmodel.TeamViewModel? = null,
     onMapClick: (LocationData) -> Unit,
     onFollowToggle: () -> Unit,
     onCurrentLocationClick: () -> Unit,
@@ -435,10 +484,60 @@ private fun MapScreenContent(
                     .padding(bottom = 120.dp, end = 20.dp),
         )
 
+        // 팀 라이딩 중단 버튼 (라이딩 중일 때만 표시) - 화면 상단 오른쪽
+        if (teamViewModel != null) {
+            val teamUiState by teamViewModel.uiState.collectAsStateWithLifecycle()
+
+            if (teamUiState.ridingStatus == net.ritirp.myapplication.data.model.RidingStatus.RIDING) {
+                Button(
+                    onClick = { teamViewModel.endRiding() },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 120.dp, end = 16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFEF5350),
+                    ),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Stop,
+                        contentDescription = null,
+                        tint = Color.White,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("라이딩 중단", color = Color.White)
+                }
+            }
+        }
+
+        // 주행 통계 바 (라이딩 중일 때만 표시) - 화면 하단
+        viewModel?.let { vm ->
+            RidingMetricsOverlay(
+                viewModel = vm,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
+            )
+        }
+
         // 로딩 상태
         if (uiState.isLoading) {
             LoadingIndicator()
         }
+    }
+}
+
+@Composable
+private fun RidingMetricsOverlay(
+    viewModel: MapViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val ridingMetrics: RidingMetrics by viewModel.ridingMetrics.collectAsState()
+    if (ridingMetrics.totalDistance > 0 || ridingMetrics.durationInSeconds > 0) {
+        RidingMetricsBar(
+            metrics = ridingMetrics,
+            modifier = modifier,
+        )
     }
 }
 
@@ -450,6 +549,7 @@ private fun MapContent(
 ) {
     var kakaoMap by remember { mutableStateOf<KakaoMap?>(null) }
     var isMapReady by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     // 카메라 이동 이벤트 감지
     viewModel?.let { vm ->
@@ -467,12 +567,20 @@ private fun MapContent(
         }
     }
 
-    // 지도 상태 변화 감지 및 업데이트
-    LaunchedEffect(kakaoMap, isMapReady, uiState.currentLocation) {
+    // 내 위치 라벨 업데이트 (독립적)
+    LaunchedEffect(uiState.currentLocation, isMapReady) {
         if (kakaoMap != null && isMapReady) {
             kakaoMap?.let { map ->
-                MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation)
-                MapUtils.addTeamMarkers(map, uiState.markers)
+                MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation, context)
+            }
+        }
+    }
+
+    // 친구 라벨 업데이트 (독립적)
+    LaunchedEffect(uiState.markers, isMapReady) {
+        if (kakaoMap != null && isMapReady) {
+            kakaoMap?.let { map ->
+                MapUtils.addTeamMarkers(map, uiState.markers, context)
             }
         }
     }
@@ -488,12 +596,12 @@ private fun MapContent(
         }
     }
 
-    LaunchedEffect(uiState.route, isMapReady) {
-        if (isMapReady) {
+    // 경로 라벨 업데이트 (독립적) - RouteLine 방식
+    LaunchedEffect(uiState.routePoints, isMapReady) {
+        if (isMapReady && uiState.routePoints.isNotEmpty()) {
             kakaoMap?.let { map ->
-                uiState.route?.let { route ->
-                    MapUtils.drawRoute(map, route)
-                }
+                println("DEBUG: Drawing route line with ${uiState.routePoints.size} points")
+                MapUtils.drawRouteLine(map, uiState.routePoints)
             }
         }
     }
@@ -515,17 +623,23 @@ private fun MapContent(
                     object : KakaoMapReadyCallback() {
                         override fun onMapReady(map: KakaoMap) {
                             kakaoMap = map
+                            isMapReady = true
+
+                            // 초기 카메라 위치 설정
                             setupMap(map, uiState.currentLocation)
 
-                            // 지도 클릭 리스너
-                            map.setOnMapClickListener { _, position, _, _ ->
-                                println("DEBUG: Map clicked at ${position.latitude}, ${position.longitude}")
-                                onMapClick(LocationData.fromLatLng(position))
+                            // 지도 클릭 리스너 설정
+                            map.setOnMapClickListener { _, latLng, _, _ ->
+                                val clickedLocation = LocationData(latLng.latitude, latLng.longitude)
+                                onMapClick(clickedLocation)
                             }
 
-                            // 지도 준비 완료 표시
-                            isMapReady = true
-                            println("DEBUG: Map is ready, setting isMapReady = true")
+                            // 초기 마커 표시 (경로는 LaunchedEffect에서 처리)
+                            MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation, context)
+                            MapUtils.addTeamMarkers(map, uiState.markers, context)
+                            uiState.destination?.let { dest ->
+                                MapUtils.addDestinationMarker(map, dest)
+                            }
                         }
                     },
                 )

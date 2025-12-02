@@ -12,12 +12,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import net.ritirp.myapplication.data.model.RidingMetrics
 import net.ritirp.myapplication.data.model.RidingStatus
 import net.ritirp.myapplication.data.model.TeamInfo
 import net.ritirp.myapplication.data.model.TeamMemberLocation
 import net.ritirp.myapplication.data.repository.DrivingRepository
 import net.ritirp.myapplication.data.repository.MapRepository
 import net.ritirp.myapplication.data.repository.TeamRepository
+import net.ritirp.myapplication.service.RidingMetricsTracker
 import kotlin.coroutines.resume
 
 /**
@@ -28,13 +30,34 @@ class TeamViewModel(
     private val drivingRepository: DrivingRepository,
     private val fusedLocationClient: FusedLocationProviderClient,
     private val mapRepository: MapRepository,
+    private val ridingMetricsTracker: RidingMetricsTracker? = null,
+    private val ridingRecordRepository: net.ritirp.myapplication.data.repository.RidingRecordRepository? = null,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TeamUiState())
     val uiState: StateFlow<TeamUiState> = _uiState.asStateFlow()
 
+    private val _ridingMetrics = MutableStateFlow(RidingMetrics())
+    val ridingMetrics: StateFlow<RidingMetrics> = _ridingMetrics.asStateFlow()
+
+    private var currentTeamName: String? = null
+
     init {
         loadTeamList()
         observeRidingStatus()
+        observeRidingMetrics()
+    }
+
+    /**
+     * 주행 통계 관찰
+     */
+    private fun observeRidingMetrics() {
+        ridingMetricsTracker?.let { tracker ->
+            viewModelScope.launch {
+                tracker.metrics.collect { metrics ->
+                    _ridingMetrics.value = metrics
+                }
+            }
+        }
     }
 
     /**
@@ -203,18 +226,22 @@ class TeamViewModel(
      * 팀 정보 조회
      */
     fun getTeamInfo(teamId: String) {
+        android.util.Log.d("TeamViewModel", "getTeamInfo 호출: teamId=$teamId")
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             teamRepository.getTeamInfo(teamId)
                 .onSuccess { teamInfo ->
+                    android.util.Log.d("TeamViewModel", "팀 정보 조회 성공: ${teamInfo.name}, members=${teamInfo.members?.size}")
                     _uiState.value =
                         _uiState.value.copy(
                             selectedTeam = teamInfo,
                             isLoading = false,
                         )
+                    android.util.Log.d("TeamViewModel", "selectedTeam 설정 완료: ${_uiState.value.selectedTeam?.name}")
                 }
                 .onFailure { error ->
+                    android.util.Log.e("TeamViewModel", "팀 정보 조회 실패: ${error.message}")
                     _uiState.value =
                         _uiState.value.copy(
                             error = error.message ?: "팀 정보 조회에 실패했습니다.",
@@ -427,11 +454,20 @@ class TeamViewModelFactory(
     private val drivingRepository: DrivingRepository,
     private val fusedLocationClient: FusedLocationProviderClient,
     private val mapRepository: MapRepository,
+    private val ridingMetricsTracker: RidingMetricsTracker? = null,
+    private val ridingRecordRepository: net.ritirp.myapplication.data.repository.RidingRecordRepository? = null,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TeamViewModel::class.java)) {
-            return TeamViewModel(teamRepository, drivingRepository, fusedLocationClient, mapRepository) as T
+            return TeamViewModel(
+                teamRepository,
+                drivingRepository,
+                fusedLocationClient,
+                mapRepository,
+                ridingMetricsTracker,
+                ridingRecordRepository,
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

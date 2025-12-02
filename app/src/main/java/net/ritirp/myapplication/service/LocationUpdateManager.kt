@@ -23,6 +23,7 @@ class LocationUpdateManager(
     private val fusedLocationClient: FusedLocationProviderClient,
     private val drivingRepository: DrivingRepository,
     private val mapRepository: MapRepository,
+    private val ridingMetricsTracker: RidingMetricsTracker? = null,
 ) {
     private var locationUpdateJob: Job? = null
 
@@ -32,36 +33,66 @@ class LocationUpdateManager(
             drivingRepository.currentRidingRecordId.collect { ridingRecordId ->
                 if (ridingRecordId != null) {
                     Log.d("LocationUpdateManager", "라이딩 시작 감지, 위치 업데이트 시작: $ridingRecordId")
+                    ridingMetricsTracker?.start()
                     startLocationUpdates()
                 } else {
                     Log.d("LocationUpdateManager", "라이딩 종료 감지, 위치 업데이트 중지")
                     stopLocationUpdates()
+                    ridingMetricsTracker?.stop()
                 }
             }
         }
     }
 
     /**
-     * GPS 위치 가져오기
+     * GPS 위치 가져오기 (위도, 경도, 고도, 속도)
      */
     @SuppressLint("MissingPermission")
-    private suspend fun getCurrentGpsLocation(): Pair<Double, Double> =
+    private suspend fun getCurrentGpsLocation(): LocationData =
         suspendCancellableCoroutine { continuation ->
             fusedLocationClient.getCurrentLocation(
                 Priority.PRIORITY_HIGH_ACCURACY,
                 CancellationTokenSource().token,
             ).addOnSuccessListener { location ->
                 if (location != null) {
-                    continuation.resume(Pair(location.latitude, location.longitude))
+                    continuation.resume(
+                        LocationData(
+                            latitude = location.latitude,
+                            longitude = location.longitude,
+                            altitude = if (location.hasAltitude()) location.altitude else null,
+                            speed = if (location.hasSpeed()) location.speed else null,
+                        ),
+                    )
                 } else {
                     // 위치를 가져오지 못한 경우 기본 위치 사용
-                    continuation.resume(Pair(37.5666102, 126.9783881))
+                    continuation.resume(
+                        LocationData(
+                            latitude = 37.5666102,
+                            longitude = 126.9783881,
+                            altitude = null,
+                            speed = null,
+                        ),
+                    )
                 }
             }.addOnFailureListener {
                 // 실패한 경우 기본 위치 사용
-                continuation.resume(Pair(37.5666102, 126.9783881))
+                continuation.resume(
+                    LocationData(
+                        latitude = 37.5666102,
+                        longitude = 126.9783881,
+                        altitude = null,
+                        speed = null,
+                    ),
+                )
             }
         }
+
+    private data class LocationData(
+        val latitude: Double,
+        val longitude: Double,
+        val altitude: Double?,
+        val speed: Float?,
+    )
 
     /**
      * 위치 업데이트 시작
@@ -79,15 +110,27 @@ class LocationUpdateManager(
                         val ridingRecordId = drivingRepository.currentRidingRecordId.value
                         if (ridingRecordId != null) {
                             // GPS 위치 가져오기
-                            val (lat, lon) = getCurrentGpsLocation()
-                            Log.d("LocationUpdateManager", "위치 업데이트: lat=$lat, lon=$lon")
+                            val locationData = getCurrentGpsLocation()
+                            Log.d(
+                                "LocationUpdateManager",
+                                "위치 업데이트: lat=${locationData.latitude}, lon=${locationData.longitude}, " +
+                                    "alt=${locationData.altitude}, speed=${locationData.speed}",
+                            )
+
+                            // RidingMetricsTracker에 위치 업데이트
+                            ridingMetricsTracker?.updateLocation(
+                                locationData.latitude,
+                                locationData.longitude,
+                                locationData.altitude,
+                                locationData.speed,
+                            )
 
                             // 서버에 위치 업데이트 & 팀원 위치 조회
                             drivingRepository.updateLocationAndGetTeamLocations(
                                 ridingRecordId,
-                                lat,
-                                lon,
-                                null,
+                                locationData.latitude,
+                                locationData.longitude,
+                                locationData.altitude,
                             ).onSuccess { locations ->
                                 Log.d("LocationUpdateManager", "팀원 ${locations.size}명 위치 업데이트 성공")
                                 locations.forEach { member ->

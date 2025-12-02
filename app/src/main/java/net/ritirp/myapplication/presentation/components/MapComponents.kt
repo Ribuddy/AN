@@ -4,11 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -110,17 +105,52 @@ fun BottomNavigationBar(
         containerColor = Color.White,
         modifier = modifier,
     ) {
-        listOf(
-            BottomTab.MAP to Icons.Default.Home,
-            BottomTab.REPORT to Icons.Default.Build,
-            BottomTab.FRIEND to Icons.Default.Group,
-            BottomTab.MY to Icons.Default.Person,
-        ).forEach { (tab, icon) ->
+        val items =
+            listOf(
+                BottomTab.MAP,
+                BottomTab.REPORT,
+                BottomTab.BUDDY,
+                BottomTab.MY,
+            )
+
+        items.forEach { tab ->
+            val iconRes =
+                when (tab) {
+                    BottomTab.MAP -> R.drawable.ic_bottom_map
+                    BottomTab.REPORT -> R.drawable.ic_bottom_report
+                    BottomTab.BUDDY -> R.drawable.ic_bottom_buddy
+                    BottomTab.MY -> R.drawable.ic_bottom_my
+                }
+
+            val isSelected = currentTab == tab
+            val selectedColor = Color(0xFF4285F4)
+            val unselectedColor = Color(0xFF9E9E9E)
+
             NavigationBarItem(
-                selected = currentTab == tab,
+                selected = isSelected,
                 onClick = { onTabSelected(tab) },
-                icon = { Icon(icon, contentDescription = tab.label) },
-                label = { Text(tab.label) },
+                icon = {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = tab.label,
+                        tint = if (isSelected) selectedColor else unselectedColor,
+                        modifier = Modifier.size(if (isSelected) 30.dp else 26.dp),
+                    )
+                },
+                label = {
+                    Text(
+                        text = tab.label,
+                        color = if (isSelected) selectedColor else unselectedColor,
+                    )
+                },
+                colors =
+                    NavigationBarItemDefaults.colors(
+                        indicatorColor = selectedColor.copy(alpha = 0.12f),
+                        selectedIconColor = selectedColor,
+                        selectedTextColor = selectedColor,
+                        unselectedIconColor = unselectedColor,
+                        unselectedTextColor = unselectedColor,
+                    ),
             )
         }
     }

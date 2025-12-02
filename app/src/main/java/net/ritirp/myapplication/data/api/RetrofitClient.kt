@@ -94,4 +94,5 @@ object RetrofitClient {
     val friendApi: FriendApi = retrofit.create(FriendApi::class.java)
     val drivingApi: DrivingApi = retrofit.create(DrivingApi::class.java)
     val userApi: UserApi = retrofit.create(UserApi::class.java)
+    val mapApi: MapApi = retrofit.create(MapApi::class.java)
 }

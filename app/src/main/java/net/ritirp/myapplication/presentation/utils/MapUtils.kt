@@ -287,8 +287,68 @@ object MapUtils {
     }
 
     /**
-     * 경로 표시 (점선) - layer_route
+     * 경로 표시 (RouteLine 방식)
+     * @param map KakaoMap 인스턴스
+     * @param routePoints 경로 좌표 리스트 (LatLng)
      */
+    fun drawRouteLine(
+        map: KakaoMap,
+        routePoints: List<LatLng>,
+    ) {
+        if (routePoints.isEmpty()) {
+            println("DEBUG: No route points to draw")
+            return
+        }
+
+        val routeLineManager = map.routeLineManager ?: run {
+            println("DEBUG: RouteLineManager is null")
+            return
+        }
+
+        try {
+            // 기존 경로 제거
+            routeLineManager.layer?.removeAll()
+
+            // RouteLineSegment 생성
+            val segment = com.kakao.vectormap.route.RouteLineSegment.from(routePoints)
+                .setStyles(
+                    com.kakao.vectormap.route.RouteLineStyle.from(
+                        10f, // 선 두께
+                        android.graphics.Color.parseColor("#0066FF") // 파란색
+                    )
+                )
+
+            // RouteLineOptions 생성
+            val options = com.kakao.vectormap.route.RouteLineOptions.from(segment)
+                .setStylesSet(
+                    com.kakao.vectormap.route.RouteLineStylesSet.from(
+                        com.kakao.vectormap.route.RouteLineStyles.from(
+                            com.kakao.vectormap.route.RouteLineStyle.from(
+                                10f,
+                                android.graphics.Color.parseColor("#0066FF")
+                            )
+                        )
+                    )
+                )
+
+            // RouteLine 추가
+            val routeLine = routeLineManager.layer?.addRouteLine(options)
+
+            if (routeLine != null) {
+                println("DEBUG: RouteLine drawn successfully with ${routePoints.size} points")
+            } else {
+                println("DEBUG: Failed to add RouteLine")
+            }
+        } catch (e: Exception) {
+            println("DEBUG: Exception drawing RouteLine: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * 경로 표시 (점선) - 레거시 방식 (사용 안 함)
+     */
+    @Deprecated("Use drawRouteLine instead")
     fun drawRoute(
         map: KakaoMap,
         route: RouteData,

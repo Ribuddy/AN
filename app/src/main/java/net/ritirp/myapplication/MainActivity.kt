@@ -596,12 +596,12 @@ private fun MapContent(
         }
     }
 
-    LaunchedEffect(uiState.route, isMapReady) {
-        if (isMapReady) {
+    // 경로 라벨 업데이트 (독립적) - RouteLine 방식
+    LaunchedEffect(uiState.routePoints, isMapReady) {
+        if (isMapReady && uiState.routePoints.isNotEmpty()) {
             kakaoMap?.let { map ->
-                uiState.route?.let { route ->
-                    MapUtils.drawRoute(map, route)
-                }
+                println("DEBUG: Drawing route line with ${uiState.routePoints.size} points")
+                MapUtils.drawRouteLine(map, uiState.routePoints)
             }
         }
     }
@@ -634,14 +634,11 @@ private fun MapContent(
                                 onMapClick(clickedLocation)
                             }
 
-                            // 초기 마커 및 경로 표시
+                            // 초기 마커 표시 (경로는 LaunchedEffect에서 처리)
                             MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation, context)
                             MapUtils.addTeamMarkers(map, uiState.markers, context)
                             uiState.destination?.let { dest ->
                                 MapUtils.addDestinationMarker(map, dest)
-                            }
-                            uiState.route?.let { route ->
-                                MapUtils.drawRoute(map, route)
                             }
                         }
                     },

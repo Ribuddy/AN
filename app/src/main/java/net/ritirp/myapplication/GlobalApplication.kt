@@ -95,7 +95,10 @@ class GlobalApplication : Application() {
             )
 
         // Map 저장소 초기화
-        mapRepository = MapRepository(LocationServices.getFusedLocationProviderClient(this))
+        mapRepository = MapRepository(
+            LocationServices.getFusedLocationProviderClient(this),
+            net.ritirp.myapplication.data.api.RetrofitClient.mapApi
+        )
 
         // 사용자 저장소 초기화
         userRepository = UserRepository(this)

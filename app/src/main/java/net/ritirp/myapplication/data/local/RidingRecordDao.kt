@@ -13,11 +13,17 @@ interface RidingRecordDao {
     @Insert
     suspend fun insert(record: RidingRecordEntity): Long
 
+    @androidx.room.Update
+    suspend fun update(record: RidingRecordEntity)
+
     @Query("SELECT * FROM riding_records ORDER BY startTime DESC")
     fun getAllRecords(): Flow<List<RidingRecordEntity>>
 
     @Query("SELECT * FROM riding_records WHERE id = :id")
     suspend fun getRecordById(id: Long): RidingRecordEntity?
+
+    @Query("SELECT * FROM riding_records WHERE id = :id")
+    suspend fun getRecord(id: Long): RidingRecordEntity?
 
     @Query("DELETE FROM riding_records WHERE id = :id")
     suspend fun deleteRecord(id: Long)

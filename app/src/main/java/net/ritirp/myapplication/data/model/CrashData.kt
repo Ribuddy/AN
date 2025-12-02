@@ -84,4 +84,5 @@ data class LocationRecord(
     val longitude: Double,
     val altitude: Double?,
     val speed: Float?, // GPS 속도 (m/s)
+    val leanAngle: Float? = null, // 해당 지점의 기울기 각도
 )

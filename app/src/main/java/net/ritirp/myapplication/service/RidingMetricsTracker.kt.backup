@@ -28,7 +28,6 @@ import kotlin.math.sqrt
  * - Top Speed: GPS 속도 최댓값
  * - Climb/Fall: 고도 변화 누적
  * - Lean Angle: 가속도계와 자이로스코프 기반 기울기 계산
- * - 하나의 주행 레코드에 3초마다 위치 포인트 추가
  */
 class RidingMetricsTracker(
     private val context: Context,
@@ -46,7 +45,7 @@ class RidingMetricsTracker(
     private val _metrics = MutableStateFlow(RidingMetrics())
     val metrics: StateFlow<RidingMetrics> = _metrics.asStateFlow()
 
-    // 위치 기록 버퍼 (메모리에만 저장, DB에는 종료 시 한번에 저장)
+    // 위치 기록 버퍼
     private val locationHistory = mutableListOf<LocationRecord>()
     private var lastLocation: LocationRecord? = null
 
@@ -91,98 +90,38 @@ class RidingMetricsTracker(
         locationHistory.clear()
         lastLocation = null
         isRunning = true
-
-        Log.d(TAG, "📊 Data collection started (memory only, will save on stop)")
     }
 
     /**
      * 주행 통계 추적 중지
-     * 메모리에 수집된 모든 데이터를 DB에 한번에 저장
      */
     fun stop() {
         if (!isRunning) return
 
         Log.d(TAG, "🔴 Stopping riding metrics tracking")
-
         sensorManager.unregisterListener(this)
         _metrics.value = _metrics.value.copy(endTime = System.currentTimeMillis())
         isRunning = false
 
-        // 모든 데이터를 하나의 레코드로 저장
-        scope.launch {
-            saveAllDataToDatabase()
+        // 의미 있는 주행 데이터가 있으면 자동 저장 (거리 100m 이상 또는 1분 이상)
+        val currentMetrics = _metrics.value
+        if (currentMetrics.totalDistance > 100 || currentMetrics.durationInSeconds > 60) {
+            saveRidingRecord()
         }
     }
 
     /**
-     * 메모리에 수집된 모든 데이터를 하나의 레코드로 DB에 저장
+     * 주행 기록 저장
      */
-    private suspend fun saveAllDataToDatabase() {
-        try {
-            if (locationHistory.isEmpty()) {
-                Log.w(TAG, "⚠️ No location data collected")
-                return
+    fun saveRidingRecord(teamName: String? = null) {
+        scope.launch {
+            try {
+                val repository = GlobalApplication.getRidingRecordRepository(context)
+                val recordId = repository.saveRidingRecord(_metrics.value, teamName)
+                Log.d(TAG, "✅ Riding record saved with ID: $recordId")
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Failed to save riding record", e)
             }
-
-            val repository = GlobalApplication.getLocalRidingRecordRepository(context)
-            val currentMetrics = _metrics.value
-
-            val firstLocation = locationHistory.first()
-            val lastLocation = locationHistory.last()
-
-            Log.d(TAG, "💾 Saving riding record with ${locationHistory.size} location points...")
-
-            // 새 레코드 생성
-            val result = repository.startRiding(
-                teamId = null,
-                teamName = "주행_${System.currentTimeMillis() / 1000}",
-                startLat = firstLocation.latitude,
-                startLon = firstLocation.longitude,
-                startEle = firstLocation.altitude,
-                startLocationName = null
-            )
-
-            result.onSuccess { recordId ->
-                Log.d(TAG, "✅ Riding record created (ID: $recordId)")
-
-                // 모든 위치 포인트를 하나씩 추가 (각 포인트의 기울기 값 포함)
-                locationHistory.forEachIndexed { index, loc ->
-                    repository.updateLocation(
-                        recordId = recordId,
-                        lat = loc.latitude,
-                        lon = loc.longitude,
-                        ele = loc.altitude,
-                        speedKmh = (loc.speed ?: 0f) * 3.6, // m/s -> km/h
-                        accuracy = null,
-                        leanAngleDegrees = (loc.leanAngle ?: 0f).toDouble() // 각 포인트의 기울기
-                    )
-
-                    if ((index + 1) % 10 == 0) {
-                        Log.d(TAG, "   📍 Saved ${index + 1}/${locationHistory.size} points...")
-                    }
-                }
-
-                // 주행 완료 처리
-                repository.endRiding(
-                    recordId = recordId,
-                    endLat = lastLocation.latitude,
-                    endLon = lastLocation.longitude,
-                    endEle = lastLocation.altitude,
-                    endLocationName = null
-                )
-
-                Log.d(TAG, "✅ Riding record completed!")
-                Log.d(TAG, "   📊 Total Points: ${locationHistory.size}")
-                Log.d(TAG, "   📏 Distance: ${String.format("%.2f", currentMetrics.totalDistance)}m")
-                Log.d(TAG, "   🏃 Max Speed: ${String.format("%.1f", currentMetrics.topSpeed * 3.6f)} km/h")
-                Log.d(TAG, "   📐 Max LeanAngle: ${String.format("%.1f", currentMetrics.maxLeanAngle)}°")
-                Log.d(TAG, "   ⬆️ Climb: ${String.format("%.2f", currentMetrics.totalClimb)}m")
-                Log.d(TAG, "   ⬇️ Fall: ${String.format("%.2f", currentMetrics.totalFall)}m")
-            }.onFailure { error ->
-                Log.e(TAG, "❌ Failed to create riding record", error)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to save riding data", e)
         }
     }
 
@@ -195,17 +134,10 @@ class RidingMetricsTracker(
         altitude: Double?,
         speed: Float?,
     ) {
-        if (!isRunning) {
-            Log.w(TAG, "⚠️ updateLocation called but tracker is not running")
-            return
-        }
+        if (!isRunning) return
 
         val now = System.currentTimeMillis()
-        // 현재 기울기 값을 포함한 LocationRecord 생성
-        val currentLeanAngle = _metrics.value.currentLeanAngle
-        val locationRecord = LocationRecord(now, latitude, longitude, altitude, speed, currentLeanAngle)
-
-        Log.d(TAG, "🌍 GPS Update #${locationHistory.size + 1}: lat=$latitude, lon=$longitude, alt=$altitude, speed=$speed, lean=${String.format("%.1f", currentLeanAngle)}°")
+        val locationRecord = LocationRecord(now, latitude, longitude, altitude, speed)
 
         // 거리 계산
         lastLocation?.let { last ->

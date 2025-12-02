@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -355,6 +356,76 @@ fun RidingRecordDetailScreen(
                         DetailStatRow("최대 기울기", String.format(java.util.Locale.getDefault(), "%.1f°", record.maxLeanAngleDegrees))
                         DetailStatRow("상승", String.format(java.util.Locale.getDefault(), "%.1f m", record.totalClimbMeters))
                         DetailStatRow("하강", String.format(java.util.Locale.getDefault(), "%.1f m", record.totalFallMeters))
+                    }
+                }
+            }
+
+            // 위치 포인트 목록
+            if (record.routePoints.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "위치 포인트 (${record.routePoints.size}개)",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+
+                itemsIndexed(record.routePoints) { index, point ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        ),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Text(
+                                text = "#${index + 1} - ${formatDateTime(point.timestamp)}",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(
+                                text = "📍 위치: ${String.format("%.6f", point.lat)}, ${String.format("%.6f", point.lon)}",
+                                fontSize = 12.sp,
+                            )
+                            point.ele?.let {
+                                Text(
+                                    text = "⛰️ 고도: ${String.format("%.1f", it)}m",
+                                    fontSize = 12.sp,
+                                )
+                            }
+                            point.speedKmh?.let {
+                                Text(
+                                    text = "🏃 속도: ${String.format("%.1f", it)} km/h",
+                                    fontSize = 12.sp,
+                                )
+                            }
+                            point.leanAngleDegrees?.let {
+                                Text(
+                                    text = "📐 기울기: ${String.format("%.1f", it)}°",
+                                    fontSize = 12.sp,
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                        ),
+                    ) {
+                        Text(
+                            text = "⚠️ 위치 포인트 데이터가 없습니다",
+                            modifier = Modifier.padding(16.dp),
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
                     }
                 }
             }

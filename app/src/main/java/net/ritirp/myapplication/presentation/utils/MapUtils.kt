@@ -1,13 +1,18 @@
 package net.ritirp.myapplication.presentation.utils
 
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
+import android.content.Context
+import android.graphics.Bitmap
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import com.kakao.vectormap.KakaoMap
+import com.kakao.vectormap.LatLng
 import com.kakao.vectormap.label.LabelLayerOptions
 import com.kakao.vectormap.label.LabelOptions
 import com.kakao.vectormap.label.LabelStyle
+import com.kakao.vectormap.label.LabelStyles
 import com.kakao.vectormap.label.LabelTextBuilder
 import com.kakao.vectormap.label.LabelTextStyle
+import net.ritirp.myapplication.R
 import net.ritirp.myapplication.data.model.LocationData
 import net.ritirp.myapplication.data.model.MarkerData
 import net.ritirp.myapplication.data.model.MarkerType
@@ -17,12 +22,54 @@ import net.ritirp.myapplication.data.model.RouteData
  * 지도 관련 유틸리티 함수들
  */
 object MapUtils {
+    // 친구 목록 캐싱 (diff 계산용)
+    private val previousBuddyIds = mutableSetOf<String>()
+
+    // Bitmap 캐시 (lazy initialization)
+    private var cachedBuddyBitmap: Bitmap? = null
+
     /**
-     * 현재 위치 마커 추가/업데이트
+     * VectorDrawable을 Bitmap으로 변환
+     * @param context Context
+     * @param drawableId Drawable 리소스 ID
+     * @param sizeDp 크기 (dp)
+     * @return Bitmap
+     */
+    fun vectorToBitmap(context: Context, drawableId: Int, sizeDp: Int): Bitmap? {
+        return try {
+            val drawable = ContextCompat.getDrawable(context, drawableId) ?: return null
+            val density = context.resources.displayMetrics.density
+            val sizePx = (sizeDp * density).toInt()
+            drawable.toBitmap(width = sizePx, height = sizePx, config = Bitmap.Config.ARGB_8888)
+        } catch (e: Exception) {
+            println("DEBUG: Failed to convert vector to bitmap: ${e.message}")
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * Buddy 아이콘 Bitmap 가져오기 (캐싱)
+     */
+    private fun getBuddyBitmap(context: Context): Bitmap? {
+        if (cachedBuddyBitmap == null) {
+            cachedBuddyBitmap = vectorToBitmap(context, R.drawable.ic_buddy, 40)
+            println("DEBUG: Buddy bitmap cached")
+        }
+        return cachedBuddyBitmap
+    }
+
+    /**
+     * 내 위치 라벨 추가/업데이트 (layer_me)
+     * - 레이어: layer_me
+     * - 라벨 ID: "me"
+     * - 아이콘: Bitmap (R.drawable.ic_buddy)
+     * - 존재하면 moveTo로 업데이트, 없으면 생성
      */
     fun addOrUpdateCurrentLocationMarker(
         map: KakaoMap?,
         location: LocationData,
+        context: Context,
     ) {
         if (map == null) {
             println("DEBUG: Map is null")
@@ -34,53 +81,54 @@ object MapUtils {
             return
         }
 
-        println("DEBUG: Adding current location marker at ${location.latitude}, ${location.longitude}")
+        println("DEBUG: Updating my location label at ${location.latitude}, ${location.longitude}")
 
         try {
-            // 기존 레이어 확인 및 라벨 제거
-            val existingLayer = labelManager.getLayer("current_location_layer")
-            if (existingLayer != null) {
-                existingLayer.getLabel("current_location_marker")?.let { label ->
-                    existingLayer.remove(label)
-                }
-            } else {
-                // 새 레이어 생성
-                val layerOptions = LabelLayerOptions.from("current_location_layer").setZOrder(10002)
+            // layer_me 레이어 가져오기 또는 생성
+            val layer = labelManager.getLayer("layer_me") ?: run {
+                val layerOptions = LabelLayerOptions.from("layer_me").setZOrder(10002)
                 labelManager.addLayer(layerOptions)
             }
 
-            val layer = labelManager.getLayer("current_location_layer")
             if (layer == null) {
-                println("DEBUG: Failed to get or create current location layer")
+                println("DEBUG: Failed to get or create layer_me")
                 return
             }
 
-            // 현재 위치 마커 생성
-            val red = Color(0xFFFF0000).toArgb()
-            val textBuilder = LabelTextBuilder().setTexts("📍")
-            val textStyle = LabelTextStyle.from(48, red)
-            val style = LabelStyle.from(textStyle)
+            val latLng = LatLng.from(location.latitude, location.longitude)
+            val existingLabel = layer.getLabel("me")
 
-            val options =
-                LabelOptions
-                    .from("current_location_marker", location.toLatLng())
-                    .setStyles(style)
-                    .setTexts(textBuilder)
-
-            val label = layer.addLabel(options)
-            if (label != null) {
-                println("DEBUG: Current location marker added successfully")
+            if (existingLabel != null) {
+                // 이미 존재하면 moveTo로 위치만 업데이트 (깜빡임 없음)
+                existingLabel.moveTo(latLng)
+                println("DEBUG: My location label moved to new position")
             } else {
-                println("DEBUG: Failed to add current location marker")
+                // 없으면 새로 생성
+                val buddyBitmap = getBuddyBitmap(context)
+                if (buddyBitmap == null) {
+                    println("DEBUG: Failed to get buddy bitmap")
+                    return
+                }
+
+                val options = LabelOptions
+                    .from("me", latLng)
+                    .setStyles(buddyBitmap)
+
+                val label = layer.addLabel(options)
+                if (label != null) {
+                    println("DEBUG: My location label created successfully with bitmap")
+                } else {
+                    println("DEBUG: Failed to create my location label")
+                }
             }
         } catch (e: Exception) {
-            println("DEBUG: Exception while adding current location marker: ${e.message}")
+            println("DEBUG: Exception while updating my location label: ${e.message}")
             e.printStackTrace()
         }
     }
 
     /**
-     * 목적지 마커 추가
+     * 목적지 마커 추가 (layer_destination)
      */
     fun addDestinationMarker(
         map: KakaoMap,
@@ -95,123 +143,151 @@ object MapUtils {
         println("DEBUG: Adding destination marker at ${location.latitude}, ${location.longitude}")
 
         try {
-            // 기존 destination_layer 완전히 제거하고 다시 생성
-            labelManager.getLayer("destination_layer")?.let { existingLayer ->
-                labelManager.remove(existingLayer)
-                println("DEBUG: Removed existing destination layer")
+            // layer_destination 레이어 가져오기 또는 생성
+            val layer = labelManager.getLayer("layer_destination") ?: run {
+                val layerOptions = LabelLayerOptions.from("layer_destination").setZOrder(10000)
+                labelManager.addLayer(layerOptions)
             }
 
-            // 새 레이어 생성
-            val layerOptions = LabelLayerOptions.from("destination_layer").setZOrder(10001)
-            val layer = labelManager.addLayer(layerOptions)
-
             if (layer == null) {
-                println("DEBUG: Failed to create destination layer")
+                println("DEBUG: Failed to get or create layer_destination")
                 return
             }
 
-            // 목적지 마커 추가 - 더 큰 사이즈와 다른 이모지 사용
-            val blue = Color(0xFF0066FF).toArgb()
-            val textBuilder = LabelTextBuilder().setTexts("🚩") // 깃발 이모지로 변경
-            val textStyle = LabelTextStyle.from(56, blue) // 48 → 56으로 크기 증가
+            // 기존 목적지 마커 제거
+            layer.removeAll()
+
+            // 목적지 마커 추가
+            val blue = android.graphics.Color.parseColor("#0066FF")
+            val textBuilder = LabelTextBuilder().setTexts("🚩")
+            val textStyle = LabelTextStyle.from(56, blue)
             val style = LabelStyle.from(textStyle)
 
-            val options =
-                LabelOptions
-                    .from("destination_marker", location.toLatLng())
-                    .setStyles(style)
-                    .setTexts(textBuilder)
+            val latLng = LatLng.from(location.latitude, location.longitude)
+            val options = LabelOptions
+                .from("destination_marker", latLng)
+                .setStyles(LabelStyles.from(style))
+                .setTexts(textBuilder)
 
             val label = layer.addLabel(options)
             if (label != null) {
-                println("DEBUG: Destination marker (🚩) added successfully with size 56")
+                println("DEBUG: Destination marker added successfully")
             } else {
                 println("DEBUG: Failed to add destination marker")
             }
         } catch (e: Exception) {
             println("DEBUG: Exception adding destination marker: ${e.message}")
             e.printStackTrace()
-
-            // 백업 방식: 간단한 원형 마커
-            try {
-                val layer =
-                    labelManager.getLayer("destination_layer") ?: run {
-                        val layerOptions = LabelLayerOptions.from("destination_layer")
-                        labelManager.addLayer(layerOptions)
-                    }
-
-                layer?.let { l ->
-                    val red = Color(0xFFFF0000).toArgb()
-                    val textBuilder = LabelTextBuilder().setTexts("⭕")
-                    val textStyle = LabelTextStyle.from(40, red)
-                    val style = LabelStyle.from(textStyle)
-
-                    val options =
-                        LabelOptions
-                            .from("backup_destination", location.toLatLng())
-                            .setStyles(style)
-                            .setTexts(textBuilder)
-
-                    val backupLabel = l.addLabel(options)
-                    println("DEBUG: Backup destination marker created: ${backupLabel != null}")
-                }
-            } catch (backupException: Exception) {
-                println("DEBUG: Backup destination marker also failed: ${backupException.message}")
-            }
         }
     }
 
     /**
-     * 팀원 마커들 추가
+     * 친구(팀원) 라벨들 추가/업데이트 (layer_buddies)
+     * - 레이어: layer_buddies
+     * - 라벨 ID: "buddy_${marker.id}"
+     * - 아이콘: Bitmap (R.drawable.ic_buddy)
+     * - 존재하면 moveTo로 업데이트, 없으면 생성
+     * - markers에 없는 라벨은 삭제 (diff 관리)
      */
     fun addTeamMarkers(
         map: KakaoMap,
         markers: List<MarkerData>,
+        context: Context,
     ) {
         val labelManager = map.labelManager ?: return
 
-        println("DEBUG: Adding team markers, count: ${markers.size}")
+        println("DEBUG: Updating team markers, count: ${markers.size}")
 
         try {
-            val layer =
-                labelManager.getLayer("team_layer") ?: run {
-                    val layerOptions = LabelLayerOptions.from("team_layer").setZOrder(10000)
-                    labelManager.addLayer(layerOptions)
-                }
+            // layer_buddies 레이어 가져오기 또는 생성
+            val layer = labelManager.getLayer("layer_buddies") ?: run {
+                val layerOptions = LabelLayerOptions.from("layer_buddies").setZOrder(10001)
+                labelManager.addLayer(layerOptions)
+            }
 
-            // 기존 마커들 제거
-            layer?.removeAll()
+            if (layer == null) {
+                println("DEBUG: Failed to get or create layer_buddies")
+                return
+            }
 
             val teamMarkers = markers.filter { it.type == MarkerType.TEAM_MEMBER }
             println("DEBUG: Filtered team markers count: ${teamMarkers.size}")
 
-            teamMarkers.forEach { marker ->
-                val green = Color(0xFF00AA00).toArgb()
-                val textBuilder = LabelTextBuilder().setTexts(marker.emoji)
-                val textStyle = LabelTextStyle.from(40, green)
-                val style = LabelStyle.from(textStyle)
+            // 현재 마커 ID 세트
+            val currentBuddyIds = teamMarkers.map { "buddy_${it.id}" }.toSet()
 
-                val options =
-                    LabelOptions
-                        .from(marker.id, marker.location.toLatLng())
-                        .setStyles(style)
+            // 1. 기존 라벨 업데이트 또는 새로 생성
+            teamMarkers.forEach { marker ->
+                val labelId = "buddy_${marker.id}"
+                val latLng = LatLng.from(marker.location.latitude, marker.location.longitude)
+                val existingLabel = layer.getLabel(labelId)
+
+                if (existingLabel != null) {
+                    // 이미 존재하면 moveTo로 위치만 업데이트
+                    existingLabel.moveTo(latLng)
+                    println("DEBUG: Buddy label $labelId moved to new position")
+                } else {
+                    // 없으면 새로 생성
+                    val buddyBitmap = getBuddyBitmap(context)
+                    if (buddyBitmap == null) {
+                        println("DEBUG: Failed to get buddy bitmap for $labelId")
+                        return@forEach
+                    }
+
+                    // 마커 텍스트 추가 (선택) - 텍스트는 아이콘 위에 표시
+                    val textBuilder = LabelTextBuilder().setTexts(marker.emoji)
+
+                    val options = LabelOptions
+                        .from(labelId, latLng)
+                        .setStyles(buddyBitmap)
                         .setTexts(textBuilder)
 
-                val label = layer?.addLabel(options)
-                if (label != null) {
-                    println("DEBUG: Team marker ${marker.id} added successfully")
-                } else {
-                    println("DEBUG: Failed to add team marker ${marker.id}")
+                    val label = layer.addLabel(options)
+                    if (label != null) {
+                        println("DEBUG: Buddy label $labelId created successfully with bitmap")
+                    } else {
+                        println("DEBUG: Failed to create buddy label $labelId")
+                    }
                 }
             }
+
+            // 2. markers에 더 이상 없는 라벨 삭제 (diff)
+            val labelsToRemove = previousBuddyIds - currentBuddyIds
+            labelsToRemove.forEach { labelId ->
+                layer.getLabel(labelId)?.let { label ->
+                    layer.remove(label)
+                    println("DEBUG: Removed buddy label $labelId (no longer in markers list)")
+                }
+            }
+
+            // 3. 캐시 업데이트
+            previousBuddyIds.clear()
+            previousBuddyIds.addAll(currentBuddyIds)
+
         } catch (e: Exception) {
-            println("DEBUG: Failed to add team markers: ${e.message}")
+            println("DEBUG: Failed to update team markers: ${e.message}")
             e.printStackTrace()
         }
     }
 
     /**
-     * 경로 표시 (점선)
+     * 팀 마커 초기화 (라이딩 종료 시)
+     */
+    fun clearTeamMarkers(map: KakaoMap) {
+        val labelManager = map.labelManager ?: return
+
+        try {
+            labelManager.getLayer("layer_buddies")?.removeAll()
+            previousBuddyIds.clear()
+            println("DEBUG: All buddy labels cleared")
+        } catch (e: Exception) {
+            println("DEBUG: Failed to clear team markers: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * 경로 표시 (점선) - layer_route
      */
     fun drawRoute(
         map: KakaoMap,
@@ -220,32 +296,38 @@ object MapUtils {
         val labelManager = map.labelManager ?: return
 
         try {
-            val layer =
-                labelManager.getLayer("route_layer") ?: run {
-                    val layerOptions = LabelLayerOptions.from("route_layer").setZOrder(5000)
-                    labelManager.addLayer(layerOptions)
-                }
+            val layer = labelManager.getLayer("layer_route") ?: run {
+                val layerOptions = LabelLayerOptions.from("layer_route").setZOrder(5000)
+                labelManager.addLayer(layerOptions)
+            }
+
+            if (layer == null) {
+                println("DEBUG: Failed to get or create layer_route")
+                return
+            }
 
             // 기존 경로 제거
-            layer?.removeAll()
+            layer.removeAll()
 
             // 경로 점들 표시
             route.routePoints.forEachIndexed { index, point ->
-                val blue = Color(0xFF0066FF).toArgb()
+                val blue = android.graphics.Color.parseColor("#0066FF")
                 val textBuilder = LabelTextBuilder().setTexts("•")
                 val textStyle = LabelTextStyle.from(12, blue)
                 val style = LabelStyle.from(textStyle)
 
-                val options =
-                    LabelOptions
-                        .from("route_point_$index", point.toLatLng())
-                        .setStyles(style)
-                        .setTexts(textBuilder)
+                val latLng = LatLng.from(point.latitude, point.longitude)
+                val options = LabelOptions
+                    .from("route_point_$index", latLng)
+                    .setStyles(LabelStyles.from(style))
+                    .setTexts(textBuilder)
 
-                layer?.addLabel(options)
+                layer.addLabel(options)
             }
+            println("DEBUG: Route drawn with ${route.routePoints.size} points")
         } catch (e: Exception) {
             println("DEBUG: Failed to draw route: ${e.message}")
+            e.printStackTrace()
         }
     }
 
@@ -255,9 +337,11 @@ object MapUtils {
     fun clearAllMarkersAndRoutes(map: KakaoMap) {
         val labelManager = map.labelManager ?: return
 
-        listOf("current_location_layer", "destination_layer", "team_layer", "route_layer").forEach { layerId ->
+        listOf("layer_me", "layer_buddies", "layer_destination", "layer_route").forEach { layerId ->
             labelManager.getLayer(layerId)?.removeAll()
         }
+        previousBuddyIds.clear()
+        println("DEBUG: All layers cleared")
     }
 
     /**

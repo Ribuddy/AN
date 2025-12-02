@@ -549,6 +549,7 @@ private fun MapContent(
 ) {
     var kakaoMap by remember { mutableStateOf<KakaoMap?>(null) }
     var isMapReady by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     // 카메라 이동 이벤트 감지
     viewModel?.let { vm ->
@@ -566,12 +567,20 @@ private fun MapContent(
         }
     }
 
-    // 지도 상태 변화 감지 및 업데이트
-    LaunchedEffect(kakaoMap, isMapReady, uiState.currentLocation) {
+    // 내 위치 라벨 업데이트 (독립적)
+    LaunchedEffect(uiState.currentLocation, isMapReady) {
         if (kakaoMap != null && isMapReady) {
             kakaoMap?.let { map ->
-                MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation)
-                MapUtils.addTeamMarkers(map, uiState.markers)
+                MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation, context)
+            }
+        }
+    }
+
+    // 친구 라벨 업데이트 (독립적)
+    LaunchedEffect(uiState.markers, isMapReady) {
+        if (kakaoMap != null && isMapReady) {
+            kakaoMap?.let { map ->
+                MapUtils.addTeamMarkers(map, uiState.markers, context)
             }
         }
     }
@@ -626,8 +635,8 @@ private fun MapContent(
                             }
 
                             // 초기 마커 및 경로 표시
-                            MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation)
-                            MapUtils.addTeamMarkers(map, uiState.markers)
+                            MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation, context)
+                            MapUtils.addTeamMarkers(map, uiState.markers, context)
                             uiState.destination?.let { dest ->
                                 MapUtils.addDestinationMarker(map, dest)
                             }

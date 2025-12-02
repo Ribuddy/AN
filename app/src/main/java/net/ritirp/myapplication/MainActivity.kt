@@ -484,7 +484,20 @@ private fun MapScreenContent(
                     .padding(bottom = 120.dp, end = 20.dp),
         )
 
-        // 팀 라이딩 중단 버튼 (라이딩 중일 때만 표시) - 화면 상단 오른쪽
+        // 기울기 캘리브레이션 버튼 - 화면 상단 오른쪽
+        Button(
+            onClick = { viewModel?.calibrateLeanAngle() },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 120.dp, end = 16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF5C6BC0),
+            ),
+        ) {
+            Text("📐 기울기 초기화", color = Color.White, fontSize = 12.sp)
+        }
+
+        // 팀 라이딩 중단 버튼 (라이딩 중일 때만 표시) - 화면 상단 오른쪽 아래
         if (teamViewModel != null) {
             val teamUiState by teamViewModel.uiState.collectAsStateWithLifecycle()
 
@@ -493,7 +506,7 @@ private fun MapScreenContent(
                     onClick = { teamViewModel.endRiding() },
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = 120.dp, end = 16.dp),
+                        .padding(top = 176.dp, end = 16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFEF5350),
                     ),

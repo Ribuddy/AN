@@ -154,6 +154,13 @@ class MapViewModel(
     fun selectTab(tab: BottomTab) {
         _uiState.value = _uiState.value.copy(currentTab = tab)
     }
+
+    /**
+     * 기울기 캘리브레이션
+     */
+    fun calibrateLeanAngle() {
+        ridingMetricsTracker?.calibrateLeanAngle()
+    }
 }
 
 /**

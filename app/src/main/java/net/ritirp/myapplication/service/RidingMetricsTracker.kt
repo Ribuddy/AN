@@ -54,6 +54,9 @@ class RidingMetricsTracker(
     private var gravityValues = FloatArray(3) { 0f }
     private var accelValues = FloatArray(3) { 0f }
 
+    // 기울기 캘리브레이션 오프셋
+    private var leanAngleOffset = 0f
+
     private var isRunning = false
 
     // 코루틴 스코프
@@ -315,7 +318,10 @@ class RidingMetricsTracker(
             ).toFloat()
 
         // 현재 기울기 (절댓값의 최댓값)
-        val currentLeanAngle = maxOf(abs(roll), abs(pitch))
+        val rawLeanAngle = maxOf(abs(roll), abs(pitch))
+
+        // 캘리브레이션 오프셋 적용
+        val currentLeanAngle = maxOf(0f, rawLeanAngle - leanAngleOffset)
 
         _metrics.value = _metrics.value.copy(currentLeanAngle = currentLeanAngle)
 
@@ -344,6 +350,24 @@ class RidingMetricsTracker(
      * 현재 통계 가져오기
      */
     fun getCurrentMetrics(): RidingMetrics = _metrics.value
+
+    /**
+     * 기울기 캘리브레이션
+     * 현재 센서 값을 기준점(0도)으로 설정
+     */
+    fun calibrateLeanAngle() {
+        val gx = if (gravitySensor != null) gravityValues[0] else accelValues[0]
+        val gy = if (gravitySensor != null) gravityValues[1] else accelValues[1]
+        val gz = if (gravitySensor != null) gravityValues[2] else accelValues[2]
+
+        val roll = Math.toDegrees(atan2(gy.toDouble(), gz.toDouble())).toFloat()
+        val pitch = Math.toDegrees(atan2(-gx.toDouble(), sqrt((gy * gy + gz * gz).toDouble()))).toFloat()
+
+        leanAngleOffset = maxOf(abs(roll), abs(pitch))
+
+        Log.d(TAG, "✅ Lean angle calibrated! Offset: ${String.format("%.1f", leanAngleOffset)}°")
+        Log.d(TAG, "   Current position set as 0° baseline")
+    }
 
     /**
      * 통계 초기화

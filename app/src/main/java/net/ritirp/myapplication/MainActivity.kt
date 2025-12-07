@@ -439,6 +439,9 @@ private fun MapScreenContent(
     isPreview: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    // 경로 입력 다이얼로그 상태
+    var showRouteDialog by remember { mutableStateOf(false) }
+
     Box(modifier = modifier.fillMaxSize()) {
         if (isPreview) {
             // 프리뷰용 지도 영역
@@ -473,6 +476,7 @@ private fun MapScreenContent(
         // 공통 UI 오버레이들
         TopSearchBar(
             onFriendClick = { /* TODO: 친구 기능 */ },
+            onSearchBarClick = { showRouteDialog = true },
         )
 
         CurrentLocationButton(
@@ -537,6 +541,20 @@ private fun MapScreenContent(
         if (uiState.isLoading) {
             LoadingIndicator()
         }
+    }
+
+    // 경로 입력 다이얼로그
+    if (showRouteDialog) {
+        RouteInputDialog(
+            currentLocationName = "내 현재 위치",
+            onDismiss = { showRouteDialog = false },
+            onConfirm = { departure, destination ->
+                android.util.Log.d("MainActivity", "경로 설정: 출발지=$departure, 도착지=$destination")
+                showRouteDialog = false
+                // TODO: 도착지 주소로 좌표 변환 후 길찾기 실행
+                // viewModel?.searchAndSetDestination(destination)
+            },
+        )
     }
 }
 

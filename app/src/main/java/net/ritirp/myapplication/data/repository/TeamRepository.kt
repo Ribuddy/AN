@@ -22,6 +22,58 @@ class TeamRepository(private val context: Context) {
     }
 
     /**
+     * 팀 생성 후 팀 목록까지 반환
+     */
+    suspend fun createTeamAndGetList(
+        name: String,
+        description: String? = null,
+        members: List<String>,
+        isCrew: Boolean = false,
+    ): Result<List<TeamInfo>> {
+        return try {
+            val token = getAccessToken()
+            if (token.isNullOrEmpty()) {
+                return Result.failure(Exception("로그인이 필요합니다."))
+            }
+
+            val request = CreateTeamRequest(
+                name = name,
+                description = description,
+                members = members,
+                isCrew = isCrew,
+            )
+
+            Log.d("TeamRepository", "🚀 [createTeamAndGetList] 팀 생성 요청: name=$name")
+            val response = teamApi.createTeam("Bearer $token", request)
+
+            if (response.isSuccessful && response.body()?.isSuccess == true) {
+                val teamId = response.body()?.result ?: ""
+                Log.d("TeamRepository", "✅ [createTeamAndGetList] 팀 생성 성공: teamId=$teamId")
+
+                // 팀 생성 성공 후 바로 팀 목록 조회
+                Log.d("TeamRepository", "🔄 [createTeamAndGetList] 팀 목록 재조회 시작")
+                val listResponse = teamApi.getTeamList("Bearer $token")
+
+                if (listResponse.isSuccessful && listResponse.body()?.isSuccess == true) {
+                    val teams = listResponse.body()?.result ?: emptyList()
+                    Log.d("TeamRepository", "✅ [createTeamAndGetList] 팀 목록 조회 성공: ${teams.size}개 팀")
+                    Result.success(teams)
+                } else {
+                    Log.e("TeamRepository", "❌ [createTeamAndGetList] 팀 목록 조회 실패")
+                    Result.failure(Exception("팀 목록 조회에 실패했습니다."))
+                }
+            } else {
+                val errorMsg = response.body()?.message ?: "팀 생성에 실패했습니다."
+                Log.e("TeamRepository", "❌ [createTeamAndGetList] 팀 생성 실패: $errorMsg")
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Log.e("TeamRepository", "❌ [createTeamAndGetList] 팀 생성 오류", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
      * 팀 생성
      */
     suspend fun createTeam(
@@ -119,6 +171,43 @@ class TeamRepository(private val context: Context) {
     }
 
     /**
+     * 팀 참여 후 팀 목록까지 반환
+     */
+    suspend fun joinTeamAndGetList(teamId: String): Result<List<TeamInfo>> {
+        return try {
+            val token = getAccessToken()
+            if (token.isNullOrEmpty()) {
+                return Result.failure(Exception("로그인이 필요합니다."))
+            }
+
+            val request = JoinTeamWithCodeRequest(code = teamId)
+            Log.d("TeamRepository", "팀 참여 요청: teamId=$teamId")
+            val response = teamApi.joinTeam("Bearer $token", request)
+
+            if (response.isSuccessful && response.body()?.isSuccess == true) {
+                Log.d("TeamRepository", "팀 참여 성공, 목록 재조회")
+
+                // 팀 참여 성공 후 바로 팀 목록 조회
+                val listResponse = teamApi.getTeamList("Bearer $token")
+                if (listResponse.isSuccessful && listResponse.body()?.isSuccess == true) {
+                    val teams = listResponse.body()?.result ?: emptyList()
+                    Log.d("TeamRepository", "팀 목록 조회 성공: ${teams.size}개 팀")
+                    Result.success(teams)
+                } else {
+                    Result.failure(Exception("팀 목록 조회에 실패했습니다."))
+                }
+            } else {
+                val errorMsg = response.body()?.message ?: "팀 참여에 실패했습니다."
+                Log.e("TeamRepository", "팀 참여 실패: $errorMsg")
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Log.e("TeamRepository", "팀 참여 오류", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
      * 팀 탈퇴하기
      */
     suspend fun leaveTeam(teamId: String): Result<Unit> {
@@ -135,6 +224,43 @@ class TeamRepository(private val context: Context) {
             if (response.isSuccessful && response.body()?.isSuccess == true) {
                 Log.d("TeamRepository", "팀 탈퇴 성공")
                 Result.success(Unit)
+            } else {
+                val errorMsg = response.body()?.message ?: "팀 탈퇴에 실패했습니다."
+                Log.e("TeamRepository", "팀 탈퇴 실패: $errorMsg")
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Log.e("TeamRepository", "팀 탈퇴 오류", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * 팀 탈퇴 후 팀 목록까지 반환
+     */
+    suspend fun leaveTeamAndGetList(teamId: String): Result<List<TeamInfo>> {
+        return try {
+            val token = getAccessToken()
+            if (token.isNullOrEmpty()) {
+                return Result.failure(Exception("로그인이 필요합니다."))
+            }
+
+            val request = JoinOrLeaveTeamRequest(id = teamId)
+            Log.d("TeamRepository", "팀 탈퇴 요청: teamId=$teamId")
+            val response = teamApi.leaveTeam("Bearer $token", request)
+
+            if (response.isSuccessful && response.body()?.isSuccess == true) {
+                Log.d("TeamRepository", "팀 탈퇴 성공, 목록 재조회")
+
+                // 팀 탈퇴 성공 후 바로 팀 목록 조회
+                val listResponse = teamApi.getTeamList("Bearer $token")
+                if (listResponse.isSuccessful && listResponse.body()?.isSuccess == true) {
+                    val teams = listResponse.body()?.result ?: emptyList()
+                    Log.d("TeamRepository", "팀 목록 조회 성공: ${teams.size}개 팀")
+                    Result.success(teams)
+                } else {
+                    Result.failure(Exception("팀 목록 조회에 실패했습니다."))
+                }
             } else {
                 val errorMsg = response.body()?.message ?: "팀 탈퇴에 실패했습니다."
                 Log.e("TeamRepository", "팀 탈퇴 실패: $errorMsg")

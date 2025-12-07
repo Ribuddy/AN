@@ -116,24 +116,33 @@ class TeamViewModel(
      */
     fun loadTeamList() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-
-            teamRepository.getTeamList()
-                .onSuccess { teams ->
-                    _uiState.value =
-                        _uiState.value.copy(
-                            teams = teams,
-                            isLoading = false,
-                        )
-                }
-                .onFailure { error ->
-                    _uiState.value =
-                        _uiState.value.copy(
-                            error = error.message ?: "팀 목록을 불러오는데 실패했습니다.",
-                            isLoading = false,
-                        )
-                }
+            loadTeamListInternal()
         }
+    }
+
+    /**
+     * 팀 목록 새로고침 (내부용 suspend 함수)
+     */
+    private suspend fun loadTeamListInternal() {
+        android.util.Log.d("TeamViewModel", "loadTeamListInternal 시작")
+
+        teamRepository.getTeamList()
+            .onSuccess { teams ->
+                android.util.Log.d("TeamViewModel", "팀 목록 로드 성공: ${teams.size}개")
+                _uiState.value =
+                    _uiState.value.copy(
+                        teams = teams,
+                        isLoading = false,
+                    )
+            }
+            .onFailure { error ->
+                android.util.Log.e("TeamViewModel", "팀 목록 로드 실패: ${error.message}")
+                _uiState.value =
+                    _uiState.value.copy(
+                        error = error.message ?: "팀 목록을 불러오는데 실패했습니다.",
+                        isLoading = false,
+                    )
+            }
     }
 
     /**
@@ -148,23 +157,26 @@ class TeamViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            teamRepository.createTeam(name, description, members, isCrew)
-                .onSuccess { teamId ->
-                    _uiState.value =
-                        _uiState.value.copy(
-                            isLoading = false,
-                            successMessage = "팀이 생성되었습니다.",
-                        )
-                    // 팀 목록 새로고침
-                    loadTeamList()
-                }
-                .onFailure { error ->
-                    _uiState.value =
-                        _uiState.value.copy(
-                            error = error.message ?: "팀 생성에 실패했습니다.",
-                            isLoading = false,
-                        )
-                }
+            // 팀 생성 + 목록 조회를 한 번에 처리
+            val result = teamRepository.createTeamAndGetList(name, description, members, isCrew)
+
+            if (result.isSuccess) {
+                val teams = result.getOrNull() ?: emptyList()
+                android.util.Log.d("TeamViewModel", "팀 생성 및 목록 로드 성공: ${teams.size}개")
+
+                _uiState.value = _uiState.value.copy(
+                    teams = teams,
+                    isLoading = false,
+                    successMessage = "팀이 생성되었습니다.",
+                )
+            } else {
+                val error = result.exceptionOrNull()
+                android.util.Log.e("TeamViewModel", "팀 생성 실패: ${error?.message}")
+                _uiState.value = _uiState.value.copy(
+                    error = error?.message ?: "팀 생성에 실패했습니다.",
+                    isLoading = false,
+                )
+            }
         }
     }
 
@@ -175,23 +187,25 @@ class TeamViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            teamRepository.joinTeam(teamId)
-                .onSuccess {
-                    _uiState.value =
-                        _uiState.value.copy(
-                            isLoading = false,
-                            successMessage = "팀에 참여했습니다.",
-                        )
-                    // 팀 목록 새로고침
-                    loadTeamList()
-                }
-                .onFailure { error ->
-                    _uiState.value =
-                        _uiState.value.copy(
-                            error = error.message ?: "팀 참여에 실패했습니다.",
-                            isLoading = false,
-                        )
-                }
+            // 팀 참여 + 목록 조회를 한 번에 처리
+            val result = teamRepository.joinTeamAndGetList(teamId)
+
+            if (result.isSuccess) {
+                val teams = result.getOrNull() ?: emptyList()
+                android.util.Log.d("TeamViewModel", "팀 참여 및 목록 로드 성공: ${teams.size}개")
+
+                _uiState.value = _uiState.value.copy(
+                    teams = teams,
+                    isLoading = false,
+                    successMessage = "팀에 참여했습니다.",
+                )
+            } else {
+                val error = result.exceptionOrNull()
+                _uiState.value = _uiState.value.copy(
+                    error = error?.message ?: "팀 참여에 실패했습니다.",
+                    isLoading = false,
+                )
+            }
         }
     }
 
@@ -202,23 +216,26 @@ class TeamViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            teamRepository.leaveTeam(teamId)
-                .onSuccess {
-                    _uiState.value =
-                        _uiState.value.copy(
-                            isLoading = false,
-                            successMessage = "팀에서 탈퇴했습니다.",
-                        )
-                    // 팀 목록 새로고침
-                    loadTeamList()
-                }
-                .onFailure { error ->
-                    _uiState.value =
-                        _uiState.value.copy(
-                            error = error.message ?: "팀 탈퇴에 실패했습니다.",
-                            isLoading = false,
-                        )
-                }
+            // 팀 탈퇴 + 목록 조회를 한 번에 처리
+            val result = teamRepository.leaveTeamAndGetList(teamId)
+
+            if (result.isSuccess) {
+                val teams = result.getOrNull() ?: emptyList()
+                android.util.Log.d("TeamViewModel", "팀 탈퇴 및 목록 로드 성공: ${teams.size}개")
+
+                _uiState.value = _uiState.value.copy(
+                    teams = teams,
+                    isLoading = false,
+                    successMessage = "팀에서 탈퇴했습니다.",
+                    selectedTeam = null,
+                )
+            } else {
+                val error = result.exceptionOrNull()
+                _uiState.value = _uiState.value.copy(
+                    error = error?.message ?: "팀 탈퇴에 실패했습니다.",
+                    isLoading = false,
+                )
+            }
         }
     }
 

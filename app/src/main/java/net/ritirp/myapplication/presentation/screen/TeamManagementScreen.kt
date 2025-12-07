@@ -57,6 +57,9 @@ fun TeamManagementScreen(
         uiState.successMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearSuccessMessage()
+            // 성공 메시지가 있으면 다이얼로그 닫기
+            showCreateDialog = false
+            showJoinDialog = false
         }
     }
 
@@ -155,8 +158,9 @@ fun TeamManagementScreen(
             CreateTeamDialog(
                 onDismiss = { showCreateDialog = false },
                 onConfirm = { name, description ->
+                    // 다이얼로그를 닫지 않고 API 호출만 실행
+                    // successMessage가 오면 LaunchedEffect에서 자동으로 다이얼로그 닫힘
                     viewModel.createTeam(name, description)
-                    showCreateDialog = false
                 },
             )
         }
@@ -166,8 +170,9 @@ fun TeamManagementScreen(
             JoinTeamDialog(
                 onDismiss = { showJoinDialog = false },
                 onConfirm = { teamId ->
+                    // 다이얼로그를 닫지 않고 API 호출만 실행
+                    // successMessage가 오면 LaunchedEffect에서 자동으로 다이얼로그 닫힘
                     viewModel.joinTeam(teamId)
-                    showJoinDialog = false
                 },
             )
         }

@@ -1,229 +1,312 @@
+
 package net.ritirp.myapplication.presentation.screen
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.DirectionsBike
+import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import net.ritirp.myapplication.data.local.entity.RidingRecordEntity
+import net.ritirp.myapplication.R
+import net.ritirp.myapplication.data.model.ImprovementCategory
+import net.ritirp.myapplication.data.model.ImprovementPoint
+import net.ritirp.myapplication.data.model.PeriodFilter
+import net.ritirp.myapplication.data.model.RidingScore
+import net.ritirp.myapplication.data.model.RidingSummary
+import net.ritirp.myapplication.data.model.ScoreFilter
+import net.ritirp.myapplication.presentation.viewmodel.RidingReportUiState
 import net.ritirp.myapplication.presentation.viewmodel.RidingReportViewModel
-import java.text.SimpleDateFormat
-import java.util.*
+
+// 색상 정의
+private val PrimaryBlue = Color(0xFF4A90D9)
+private val LightBlue = Color(0xFFE8F4FD)
+private val BackgroundBlue = Color(0xFFF0F7FF)
+private val ChartBlue = Color(0xFF5B9BD5)
+private val ScoreBlue = Color(0xFF4A90D9)
+private val TagBlue = Color(0xFFE3F2FD)
+private val TagTextBlue = Color(0xFF1976D2)
 
 /**
- * 주행 리포트 화면
+ * 주행 리포트 화면 - 이미지 디자인 기반
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RidingReportScreen(
     viewModel: RidingReportViewModel,
     modifier: Modifier = Modifier,
 ) {
-    val records by viewModel.records.collectAsStateWithLifecycle()
-    var selectedRecord by remember { mutableStateOf<RidingRecordEntity?>(null) }
-    var showDeleteDialog by remember { mutableStateOf<RidingRecordEntity?>(null) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    if (selectedRecord != null) {
-        // 상세 화면
-        RidingRecordDetailScreen(
-            record = selectedRecord!!,
-            onBack = { selectedRecord = null },
-            onDelete = { record ->
-                showDeleteDialog = record
-            },
-        )
-    } else {
-        // 목록 화면
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.White),
+    ) {
+        // 상단 타이틀
+        TopAppBar(uiState.currentScore, uiState.highScore)
+
+        // 스크롤 가능한 콘텐츠
         Column(
-            modifier = modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
         ) {
-            // 헤더
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.primaryContainer,
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                ) {
-                    Text(
-                        text = "주행 리포트",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "총 ${records.size}개의 주행 기록",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-            }
+            // 배너 섹션 (오토바이 라이더 이미지 + 메시지)
+            BannerSection(
+                currentScore = uiState.currentScore,
+                highScore = uiState.highScore,
+            )
 
-            // 리스트
-            if (records.isEmpty()) {
-                // 빈 상태
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.DirectionsBike,
-                            contentDescription = null,
-                            modifier = Modifier.size(80.dp),
-                            tint = Color.Gray,
-                        )
-                        Text(
-                            text = "주행 기록이 없습니다",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.Gray,
-                        )
-                        Text(
-                            text = "첫 라이딩을 시작해보세요!",
-                            fontSize = 14.sp,
-                            color = Color.Gray,
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(records) { record ->
-                        RidingRecordCard(
-                            record = record,
-                            onClick = { selectedRecord = record },
-                            onDelete = { showDeleteDialog = record },
-                        )
-                    }
-                }
-            }
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 내 주행 섹션
+            MyRidingSection(
+                summary = uiState.ridingSummary,
+                selectedFilter = uiState.periodFilter,
+                onFilterSelected = { viewModel.setPeriodFilter(it) },
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 주행 점수 섹션
+            RidingScoreSection(
+                score = uiState.ridingScore,
+                selectedFilter = uiState.scoreFilter,
+                onFilterSelected = { viewModel.setScoreFilter(it) },
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 개선 포인트 섹션
+            ImprovementSection(
+                improvements = uiState.improvementPoints,
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
+}
 
-    // 삭제 확인 다이얼로그
-    showDeleteDialog?.let { record ->
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = null },
-            title = { Text("주행 기록 삭제") },
-            text = { Text("이 주행 기록을 삭제하시겠습니까?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteRecord(record)
-                        showDeleteDialog = null
-                        if (selectedRecord?.id == record.id) {
-                            selectedRecord = null
-                        }
-                    },
-                ) {
-                    Text("삭제", color = Color.Red)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = null }) {
-                    Text("취소")
-                }
-            },
+@Composable
+private fun TopAppBar(currentScore: Int, highScore: Int) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "주행 리포트",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.Black,
         )
     }
 }
 
-/**
- * 주행 기록 카드
- */
 @Composable
-fun RidingRecordCard(
-    record: RidingRecordEntity,
-    onClick: () -> Unit,
-    onDelete: () -> Unit,
+private fun BannerSection(
+    currentScore: Int,
+    highScore: Int,
 ) {
-    Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(220.dp)
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFE8F4FD),
+                        Color(0xFFC5E1F9),
+                    ),
+                ),
+            ),
     ) {
+        // 도로 패턴 (곡선)
+        Canvas(
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            val width = size.width
+            val height = size.height
+
+            // 도로 곡선 그리기
+            drawArc(
+                color = Color(0xFFD0E4F7),
+                startAngle = 180f,
+                sweepAngle = 90f,
+                useCenter = false,
+                topLeft = Offset(-width * 0.3f, height * 0.3f),
+                size = Size(width * 1.2f, height),
+                style = Stroke(width = 80f),
+            )
+        }
+
+        // 메시지 말풍선
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 20.dp)
+                .background(
+                    color = Color.White,
+                    shape = RoundedCornerShape(20.dp),
+                )
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+        ) {
+            Text(
+                text = "이번 점수는 ${currentScore}점, 개인 최고점 ${highScore}점을 이겼습니다!\n계속 발전하세요!",
+                fontSize = 13.sp,
+                color = Color.Black,
+                textAlign = TextAlign.Center,
+                lineHeight = 18.sp,
+            )
+        }
+
+        // 오토바이 라이더 아이콘 (이미지가 없으므로 이모지로 대체)
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 20.dp, bottom = 20.dp),
+        ) {
+            Text(
+                text = "🏍️",
+                fontSize = 80.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MyRidingSection(
+    summary: RidingSummary,
+    selectedFilter: PeriodFilter,
+    onFilterSelected: (PeriodFilter) -> Unit,
+) {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp),
+    ) {
+        // 섹션 헤더
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                // 날짜 및 시간
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
-                    text = formatDateTime(record.startTime),
-                    fontSize = 16.sp,
+                    text = "내 주행",
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
+                    color = Color.Black,
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // 주요 통계
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    StatItem(
-                        icon = Icons.Default.Place,
-                        value = String.format(java.util.Locale.getDefault(), "%.2f km", record.distanceMeters / 1000),
-                    )
-                    StatItem(
-                        icon = Icons.Default.Timer,
-                        value = formatDuration(record.durationMillis / 1000),
-                    )
-                    StatItem(
-                        icon = Icons.Default.Speed,
-                        value = String.format(java.util.Locale.getDefault(), "%.1f km/h", record.maxSpeedKmh),
-                    )
-                }
-
-                // 팀 이름 (있는 경우)
-                record.teamName?.let { teamName ->
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Groups,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            text = teamName,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-            }
-
-            IconButton(onClick = onDelete) {
                 Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "삭제",
-                    tint = Color.Red,
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = Color.Black,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 카드
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+            ) {
+                // 기간 필터 탭
+                PeriodFilterTabs(
+                    selectedFilter = selectedFilter,
+                    onFilterSelected = onFilterSelected,
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 거리/시간 요약
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    SummaryItem(
+                        icon = "🏍️",
+                        value = String.format("%.0f", summary.totalDistanceKm) + "km",
+                        color = PrimaryBlue,
+                    )
+                    SummaryItem(
+                        icon = "⏱️",
+                        value = formatDuration(summary.totalDurationMinutes),
+                        color = Color.Gray,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // 바 차트
+                WeeklyBarChart(dailyDistances = summary.dailyDistances)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PeriodFilterTabs(
+    selectedFilter: PeriodFilter,
+    onFilterSelected: (PeriodFilter) -> Unit,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        PeriodFilter.entries.forEach { filter ->
+            val isSelected = filter == selectedFilter
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        if (isSelected) Color.Black else Color(0xFFF5F5F5),
+                    )
+                    .clickable { onFilterSelected(filter) }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = when (filter) {
+                        PeriodFilter.WEEK -> "Week"
+                        PeriodFilter.MONTH -> "Month"
+                        PeriodFilter.YEAR -> "Year"
+                    },
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (isSelected) Color.White else Color.Gray,
                 )
             }
         }
@@ -231,258 +314,393 @@ fun RidingRecordCard(
 }
 
 @Composable
-private fun StatItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+private fun SummaryItem(
+    icon: String,
     value: String,
+    color: Color,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(16.dp),
-            tint = Color.Gray,
-        )
+        Text(text = icon, fontSize = 20.sp)
         Text(
             text = value,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = color,
+        )
+    }
+}
+
+@Composable
+private fun WeeklyBarChart(
+    dailyDistances: List<net.ritirp.myapplication.data.model.DailyDistance>,
+) {
+    val maxDistance = dailyDistances.maxOfOrNull { it.distanceKm }?.coerceAtLeast(1.0) ?: 300.0
+    val chartHeight = 120.dp
+
+    Column {
+        // Y축 라벨과 차트
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            // Y축 라벨
+            Column(
+                modifier = Modifier.height(chartHeight),
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(text = "300", fontSize = 10.sp, color = Color.Gray)
+                Text(text = "200", fontSize = 10.sp, color = Color.Gray)
+                Text(text = "100", fontSize = 10.sp, color = Color.Gray)
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // 바 차트
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(chartHeight),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                dailyDistances.forEach { daily ->
+                    val barHeight = if (maxDistance > 0) {
+                        (daily.distanceKm / 300.0 * chartHeight.value).coerceAtLeast(4.0)
+                    } else {
+                        4.0
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(24.dp)
+                                .height(barHeight.dp)
+                                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                .background(ChartBlue),
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // X축 라벨
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 32.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            dailyDistances.forEach { daily ->
+                Text(
+                    text = daily.dayOfWeek,
+                    fontSize = 11.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.width(24.dp),
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RidingScoreSection(
+    score: RidingScore,
+    selectedFilter: ScoreFilter,
+    onFilterSelected: (ScoreFilter) -> Unit,
+) {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp),
+    ) {
+        // 섹션 헤더
+        Text(
+            text = "주행 점수",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black,
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 카드
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // 점수 필터 탭
+                ScoreFilterTabs(
+                    selectedFilter = selectedFilter,
+                    onFilterSelected = onFilterSelected,
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // 원형 점수 게이지
+                CircularScoreGauge(
+                    score = score.totalScore,
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // 세부 점수 리스트
+                ScoreDetailItem(
+                    label = "조작 안전",
+                    score = score.operationSafetyScore,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                ScoreDetailItem(
+                    label = "속도 안전",
+                    score = score.speedSafetyScore,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                ScoreDetailItem(
+                    label = "기울기 안정성",
+                    score = score.leanStabilityScore,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScoreFilterTabs(
+    selectedFilter: ScoreFilter,
+    onFilterSelected: (ScoreFilter) -> Unit,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        ScoreFilter.entries.forEach { filter ->
+            val isSelected = filter == selectedFilter
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        if (isSelected) Color.Black else Color(0xFFF5F5F5),
+                    )
+                    .clickable { onFilterSelected(filter) }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = when (filter) {
+                        ScoreFilter.WEEK -> "Week"
+                        ScoreFilter.TOTAL -> "Total"
+                        ScoreFilter.MONTH -> "Month"
+                    },
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (isSelected) Color.White else Color.Gray,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CircularScoreGauge(
+    score: Int,
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.size(180.dp),
+    ) {
+        Canvas(
+            modifier = Modifier.size(180.dp),
+        ) {
+            val strokeWidth = 16.dp.toPx()
+            val radius = (size.minDimension - strokeWidth) / 2
+            val center = Offset(size.width / 2, size.height / 2)
+
+            // 배경 원
+            drawCircle(
+                color = Color(0xFFE0E0E0),
+                radius = radius,
+                center = center,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+            )
+
+            // 점수에 따른 호
+            val sweepAngle = (score / 100f) * 360f
+            drawArc(
+                color = ScoreBlue,
+                startAngle = -90f,
+                sweepAngle = sweepAngle,
+                useCenter = false,
+                topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
+                size = Size(size.width - strokeWidth, size.height - strokeWidth),
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+            )
+        }
+
+        // 점수 텍스트
+        Text(
+            text = "${score}점",
+            fontSize = 36.sp,
+            fontWeight = FontWeight.Bold,
+            color = ScoreBlue,
+        )
+    }
+}
+
+@Composable
+private fun ScoreDetailItem(
+    label: String,
+    score: Int,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // 아이콘
+        Icon(
+            imageVector = Icons.Default.Navigation,
+            contentDescription = null,
+            tint = PrimaryBlue,
+            modifier = Modifier
+                .size(20.dp)
+                .padding(end = 4.dp),
+        )
+
+        // 라벨
+        Text(
+            text = label,
             fontSize = 14.sp,
             color = Color.Gray,
+            modifier = Modifier.width(90.dp),
         )
+
+        // 진행 바
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color(0xFFE0E0E0)),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(score / 100f)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xFF90CAF9),
+                                PrimaryBlue,
+                            ),
+                        ),
+                    ),
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // 점수
+        Text(
+            text = "${score}점",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black,
+        )
+    }
+}
+
+@Composable
+private fun ImprovementSection(
+    improvements: List<ImprovementPoint>,
+) {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp),
+    ) {
+        // 섹션 헤더
+        Text(
+            text = "개선 포인트",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black,
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 개선 포인트 카드들
+        improvements.forEach { improvement ->
+            ImprovementCard(improvement = improvement)
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
+private fun ImprovementCard(
+    improvement: ImprovementPoint,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+        ) {
+            // 카테고리 태그
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(TagBlue)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Text(
+                    text = when (improvement.category) {
+                        ImprovementCategory.OPERATION -> "조작"
+                        ImprovementCategory.SPEED -> "속도"
+                        ImprovementCategory.LEAN_STABILITY -> "기울기 안정성"
+                    },
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TagTextBlue,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 제목
+            Text(
+                text = improvement.title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // 설명
+            Text(
+                text = improvement.description,
+                fontSize = 14.sp,
+                color = Color.Gray,
+            )
+        }
     }
 }
 
 /**
- * 주행 기록 상세 화면
+ * 시간 포맷팅 (분 -> 시간h 분m)
  */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun RidingRecordDetailScreen(
-    record: RidingRecordEntity,
-    onBack: () -> Unit,
-    onDelete: (RidingRecordEntity) -> Unit,
-) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("주행 기록 상세") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, "뒤로가기")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { onDelete(record) }) {
-                        Icon(Icons.Default.Delete, "삭제", tint = Color.Red)
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        LazyColumn(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            // 날짜 및 시간
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors =
-                        CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        ),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                    ) {
-                        Text(
-                            text = formatDate(record.startTime),
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                        Text(
-                            text = "${formatTime(record.startTime)} - ${record.endTime?.let { formatTime(it) } ?: "진행중"}",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                        record.teamName?.let { teamName ->
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Groups,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
-                                Text(
-                                    text = teamName,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 통계
-            item {
-                Text(
-                    text = "주행 통계",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-
-            item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        DetailStatRow("거리", String.format(java.util.Locale.getDefault(), "%.2f km", record.distanceMeters / 1000))
-                        DetailStatRow("시간", formatDuration(record.durationMillis / 1000))
-                        DetailStatRow("최고 속도", String.format(java.util.Locale.getDefault(), "%.1f km/h", record.maxSpeedKmh))
-                        DetailStatRow("평균 속도", String.format(java.util.Locale.getDefault(), "%.1f km/h", record.averageSpeedKmh))
-                        DetailStatRow("최대 기울기", String.format(java.util.Locale.getDefault(), "%.1f°", record.maxLeanAngleDegrees))
-                        DetailStatRow("상승", String.format(java.util.Locale.getDefault(), "%.1f m", record.totalClimbMeters))
-                        DetailStatRow("하강", String.format(java.util.Locale.getDefault(), "%.1f m", record.totalFallMeters))
-                    }
-                }
-            }
-
-            // 위치 포인트 목록
-            if (record.routePoints.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "위치 포인트 (${record.routePoints.size}개)",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-
-                itemsIndexed(record.routePoints) { index, point ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        ),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            Text(
-                                text = "#${index + 1} - ${formatDateTime(point.timestamp)}",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                            Text(
-                                text = "📍 위치: ${String.format("%.6f", point.lat)}, ${String.format("%.6f", point.lon)}",
-                                fontSize = 12.sp,
-                            )
-                            point.ele?.let {
-                                Text(
-                                    text = "⛰️ 고도: ${String.format("%.1f", it)}m",
-                                    fontSize = 12.sp,
-                                )
-                            }
-                            point.speedKmh?.let {
-                                Text(
-                                    text = "🏃 속도: ${String.format("%.1f", it)} km/h",
-                                    fontSize = 12.sp,
-                                )
-                            }
-                            point.leanAngleDegrees?.let {
-                                Text(
-                                    text = "📐 기울기: ${String.format("%.1f", it)}°",
-                                    fontSize = 12.sp,
-                                )
-                            }
-                        }
-                    }
-                }
-            } else {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                        ),
-                    ) {
-                        Text(
-                            text = "⚠️ 위치 포인트 데이터가 없습니다",
-                            modifier = Modifier.padding(16.dp),
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DetailStatRow(
-    label: String,
-    value: String,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = label,
-            fontSize = 16.sp,
-            color = Color.Gray,
-        )
-        Text(
-            text = value,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-        )
-    }
-}
-
-// Utility functions
-private fun formatDateTime(timestamp: Long): String {
-    val sdf = SimpleDateFormat("yyyy년 MM월 dd일 HH:mm", Locale.KOREA)
-    return sdf.format(Date(timestamp))
-}
-
-private fun formatDate(date: Date): String {
-    val sdf = SimpleDateFormat("yyyy년 MM월 dd일", Locale.KOREA)
-    return sdf.format(date)
-}
-
-private fun formatTime(date: Date): String {
-    val sdf = SimpleDateFormat("HH:mm", Locale.KOREA)
-    return sdf.format(date)
-}
-
-private fun formatDateTime(date: Date): String {
-    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.KOREA)
-    return sdf.format(date)
-}
-
-private fun formatDuration(seconds: Long): String {
-    val hours = seconds / 3600
-    val minutes = (seconds % 3600) / 60
-    val secs = seconds % 60
-
-    return when {
-        hours > 0 -> String.format(java.util.Locale.getDefault(), "%d:%02d:%02d", hours, minutes, secs)
-        else -> String.format(java.util.Locale.getDefault(), "%d:%02d", minutes, secs)
-    }
+private fun formatDuration(minutes: Long): String {
+    val hours = minutes / 60
+    val mins = minutes % 60
+    return "${hours}h ${mins}m"
 }

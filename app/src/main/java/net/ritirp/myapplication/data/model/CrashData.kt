@@ -51,6 +51,8 @@ data class RidingMetrics(
     var totalFall: Double = 0.0, // 하강 고도 (미터)
     var currentSpeed: Float = 0.0f, // 현재 속도 (m/s)
     var currentLeanAngle: Float = 0.0f, // 현재 기울기 (도)
+    val isRiding: Boolean = false, // 주행 중 여부
+    val lastUpdateTime: Long = System.currentTimeMillis(), // UI 갱신용 타임스탬프
 ) {
     val duration: Long
         get() = (endTime ?: System.currentTimeMillis()) - startTime

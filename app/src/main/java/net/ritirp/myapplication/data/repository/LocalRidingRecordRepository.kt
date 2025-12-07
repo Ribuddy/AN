@@ -25,11 +25,12 @@ class LocalRidingRecordRepository(context: Context) {
         startLon: Double,
         startEle: Double? = null,
         startLocationName: String? = null,
+        startTime: Date = Date(), // 시작 시간을 직접 지정 가능 (기본값: 현재 시간)
     ): Result<Long> {
         return try {
             val record =
                 RidingRecordEntity(
-                    startTime = Date(),
+                    startTime = startTime,
                     teamId = teamId,
                     teamName = teamName,
                     startLat = startLat,
@@ -40,7 +41,7 @@ class LocalRidingRecordRepository(context: Context) {
                 )
 
             val recordId = dao.insert(record)
-            Log.d("LocalRidingRecord", "주행 시작 저장 성공: id=$recordId")
+            Log.d("LocalRidingRecord", "주행 시작 저장 성공: id=$recordId, startTime=$startTime")
             Result.success(recordId)
         } catch (e: Exception) {
             Log.e("LocalRidingRecord", "주행 시작 저장 실패", e)

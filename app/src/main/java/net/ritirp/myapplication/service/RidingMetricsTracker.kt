@@ -9,10 +9,13 @@ import android.location.Location
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import net.ritirp.myapplication.GlobalApplication
 import net.ritirp.myapplication.data.model.LocationRecord
@@ -59,6 +62,12 @@ class RidingMetricsTracker(
 
     private var isRunning = false
 
+    // 시간 업데이트 타이머 Job
+    private var timerJob: Job? = null
+
+    // 실제 주행 시작 시간 (DB 저장용)
+    private var actualStartTime: Long = 0L
+
     // 코루틴 스코프
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -90,10 +99,22 @@ class RidingMetricsTracker(
         }
 
         // 초기화
-        _metrics.value = RidingMetrics()
+        actualStartTime = System.currentTimeMillis()
+        _metrics.value = RidingMetrics(startTime = actualStartTime, isRiding = true, lastUpdateTime = actualStartTime)
         locationHistory.clear()
         lastLocation = null
         isRunning = true
+
+        // 시간 업데이트 타이머 시작 (1초마다 UI 갱신을 위해 StateFlow 업데이트)
+        timerJob = scope.launch {
+            while (isActive && isRunning) {
+                delay(1000L)
+                if (isRunning) {
+                    // lastUpdateTime을 갱신하여 StateFlow가 변경을 감지하도록 함
+                    _metrics.value = _metrics.value.copy(lastUpdateTime = System.currentTimeMillis())
+                }
+            }
+        }
 
         Log.d(TAG, "📊 Data collection started (memory only, will save on stop)")
     }
@@ -107,8 +128,12 @@ class RidingMetricsTracker(
 
         Log.d(TAG, "🔴 Stopping riding metrics tracking")
 
+        // 타이머 중지
+        timerJob?.cancel()
+        timerJob = null
+
         sensorManager.unregisterListener(this)
-        _metrics.value = _metrics.value.copy(endTime = System.currentTimeMillis())
+        _metrics.value = _metrics.value.copy(endTime = System.currentTimeMillis(), isRiding = false)
         isRunning = false
 
         // 모든 데이터를 하나의 레코드로 저장
@@ -134,15 +159,18 @@ class RidingMetricsTracker(
             val lastLocation = locationHistory.last()
 
             Log.d(TAG, "💾 Saving riding record with ${locationHistory.size} location points...")
+            Log.d(TAG, "   ⏱️ Actual start time: ${java.util.Date(actualStartTime)}")
+            Log.d(TAG, "   ⏱️ Duration: ${currentMetrics.duration}ms")
 
-            // 새 레코드 생성
+            // 새 레코드 생성 (실제 주행 시작 시간 사용)
             val result = repository.startRiding(
                 teamId = null,
-                teamName = "주행_${System.currentTimeMillis() / 1000}",
+                teamName = "주행_${actualStartTime / 1000}",
                 startLat = firstLocation.latitude,
                 startLon = firstLocation.longitude,
                 startEle = firstLocation.altitude,
-                startLocationName = null
+                startLocationName = null,
+                startTime = java.util.Date(actualStartTime) // 실제 주행 시작 시간 전달
             )
 
             result.onSuccess { recordId ->
@@ -373,9 +401,13 @@ class RidingMetricsTracker(
      * 통계 초기화
      */
     fun reset() {
+        timerJob?.cancel()
+        timerJob = null
         _metrics.value = RidingMetrics()
         locationHistory.clear()
         lastLocation = null
+        actualStartTime = 0L
+        isRunning = false
         Log.d(TAG, "Metrics reset")
     }
 }

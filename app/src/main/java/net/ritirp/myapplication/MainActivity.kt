@@ -546,7 +546,8 @@ private fun RidingMetricsOverlay(
     modifier: Modifier = Modifier,
 ) {
     val ridingMetrics: RidingMetrics by viewModel.ridingMetrics.collectAsState()
-    if (ridingMetrics.totalDistance > 0 || ridingMetrics.durationInSeconds > 0) {
+    // 주행 중일 때만 표시
+    if (ridingMetrics.isRiding) {
         RidingMetricsBar(
             metrics = ridingMetrics,
             modifier = modifier,

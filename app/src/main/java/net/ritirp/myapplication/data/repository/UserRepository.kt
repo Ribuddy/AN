@@ -97,26 +97,27 @@ class UserRepository(
      */
     suspend fun getTeamCount(): Result<Int> {
         return try {
-            Log.d("UserRepository", "팀 수 조회 시작")
+            Log.d("UserRepository", "========== 팀 수 조회 시작 ==========")
             val response = userApi.getMyProfile()
 
             if (response.isSuccessful) {
                 val apiResponse = response.body()
+                Log.d("UserRepository", "API 응답 성공: isSuccess=${apiResponse?.isSuccess}")
                 if (apiResponse?.isSuccess == true) {
                     val teamCount = apiResponse.result?.teamCount ?: 0
-                    Log.d("UserRepository", "팀 수 조회 성공: $teamCount")
+                    Log.d("UserRepository", "✅ 팀 수 조회 성공: $teamCount 개")
                     Result.success(teamCount)
                 } else {
-                    Log.e("UserRepository", "팀 수 조회 실패: ${apiResponse?.message}")
+                    Log.e("UserRepository", "❌ 팀 수 조회 실패: ${apiResponse?.message}")
                     Result.failure(Exception(apiResponse?.message ?: "팀 수 조회 실패"))
                 }
             } else {
                 val errorBody = response.errorBody()?.string()
-                Log.e("UserRepository", "HTTP 에러: ${response.code()}, $errorBody")
+                Log.e("UserRepository", "❌ HTTP 에러: ${response.code()}, $errorBody")
                 Result.failure(Exception("팀 수 조회 실패: ${response.code()}"))
             }
         } catch (e: Exception) {
-            Log.e("UserRepository", "팀 수 조회 중 예외 발생", e)
+            Log.e("UserRepository", "❌ 팀 수 조회 중 예외 발생", e)
             Result.failure(e)
         }
     }

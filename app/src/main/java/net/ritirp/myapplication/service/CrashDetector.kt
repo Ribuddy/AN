@@ -24,6 +24,7 @@ import kotlin.math.sqrt
 class CrashDetector(
     context: Context,
     private var sensitivity: SensitivityLevel = SensitivityLevel.MEDIUM,
+    private var locationProvider: (() -> Triple<Double?, Double?, Double?>)? = null, // (lat, lon, ele) 제공
 ) : SensorEventListener {
     companion object {
         private const val TAG = "CrashDetector"
@@ -335,12 +336,22 @@ class CrashDetector(
             crashDetectionCount++
             Log.e(TAG, "🚨🚨 CRASH DETECTED #$crashDetectionCount! Reason: $reason")
 
+            // 현재 위치 정보 가져오기
+            val (lat, lon, ele) = locationProvider?.invoke() ?: Triple(null, null, null)
+
+            // 기울기 각도 계산 (중력 벡터로부터)
+            val leanAngle = calculateLeanAngle()
+
             val event =
                 CrashEvent(
                     timestamp = timestamp,
                     impactMagnitude = impactMagnitude / GRAVITY,
                     rotationMagnitude = maxGyro,
                     detectionReason = reason,
+                    lat = lat,
+                    lon = lon,
+                    ele = ele,
+                    leanAngle = leanAngle,
                 )
 
             _crashEvents.tryEmit(event)
@@ -389,6 +400,42 @@ class CrashDetector(
         currentTime: Long,
     ) {
         buffer.removeAll { currentTime - it.timestamp > WINDOW_SIZE_MS }
+    }
+
+    /**
+     * 기울기 각도 계산 (중력 벡터로부터 계산)
+     * 수직으로부터 얼마나 기울어져 있는지 각도로 반환 (0도 = 수직, 90도 = 수평)
+     */
+    private fun calculateLeanAngle(): Double? {
+        if (gravityValues[0] == 0f && gravityValues[1] == 0f && gravityValues[2] == 0f) {
+            return null
+        }
+
+        // 중력 벡터의 크기
+        val gravityMagnitude = kotlin.math.sqrt(
+            gravityValues[0] * gravityValues[0] +
+            gravityValues[1] * gravityValues[1] +
+            gravityValues[2] * gravityValues[2]
+        )
+
+        if (gravityMagnitude == 0f) {
+            return null
+        }
+
+        // Z축(수직) 성분과 전체 크기의 비율로 각도 계산
+        // acos(z/|g|) = 수직으로부터의 기울기 각도
+        val cosAngle = gravityValues[2] / gravityMagnitude
+        val angleRadians = kotlin.math.acos(cosAngle.toDouble().coerceIn(-1.0, 1.0))
+        val angleDegrees = Math.toDegrees(angleRadians)
+
+        return angleDegrees
+    }
+
+    /**
+     * 위치 제공자 설정
+     */
+    fun setLocationProvider(provider: () -> Triple<Double?, Double?, Double?>) {
+        this.locationProvider = provider
     }
 
     /**

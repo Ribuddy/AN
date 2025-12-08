@@ -7,9 +7,13 @@ package net.ritirp.myapplication.data.model
 // 사고 이벤트
 data class CrashEvent(
     val timestamp: Long = System.currentTimeMillis(),
-    val impactMagnitude: Float,
-    val rotationMagnitude: Float,
-    val detectionReason: String,
+    val impactMagnitude: Float, // 충격 강도 (G 단위)
+    val rotationMagnitude: Float, // 회전 강도 (rad/s)
+    val detectionReason: String, // 감지 이유
+    val lat: Double? = null, // 위도
+    val lon: Double? = null, // 경도
+    val ele: Double? = null, // 고도
+    val leanAngle: Double? = null, // 기울기 각도 (도 단위)
 )
 
 // 감지 민감도

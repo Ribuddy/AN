@@ -24,6 +24,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -93,8 +95,21 @@ fun AppNavigation(
 
     LaunchedEffect(Unit) {
         val crashDetector = GlobalApplication.getCrashDetector(context)
+
+        // CrashDetector에 위치 제공자 설정
+        crashDetector.setLocationProvider {
+            // MapViewModel의 현재 위치 사용
+            val currentLocation = mapViewModel.uiState.value.currentLocation
+            Triple(
+                currentLocation.latitude,
+                currentLocation.longitude,
+                null // 고도 정보는 현재 없음
+            )
+        }
+
         crashDetector.crashEvents.collect { event ->
             Log.e("AppNavigation", "🚨 Crash event received, navigating to crash screen")
+            Log.d("AppNavigation", "사고 위치: lat=${event.lat}, lon=${event.lon}, ele=${event.ele}, angle=${event.leanAngle}")
             currentCrashEvent = event
             navController.navigate("crash") {
                 // 백스택에 추가하되, 중복 방지
@@ -165,6 +180,9 @@ fun AppNavigation(
         // 사고 감지 경고 화면
         composable("crash") {
             currentCrashEvent?.let { event ->
+                val drivingRepository = GlobalApplication.getDrivingRepository(context)
+                val coroutineScope = rememberCoroutineScope()
+
                 CrashAlertScreen(
                     crashEvent = event,
                     onConfirm = {
@@ -175,6 +193,39 @@ fun AppNavigation(
                     onCancel = {
                         Log.d("AppNavigation", "User is OK, dismissing alert")
                         navController.popBackStack()
+                    },
+                    onReportAccident = { crashEvent ->
+                        // 서버에 사고 보고
+                        coroutineScope.launch {
+                            val ridingRecordId = drivingRepository.currentRidingRecordId.value
+                            if (ridingRecordId != null && crashEvent.lat != null && crashEvent.lon != null) {
+                                Log.d("AppNavigation", "서버에 사고 보고 중...")
+
+                                // timestamp를 ISO 8601 형식으로 변환
+                                val isoTimestamp = java.text.SimpleDateFormat(
+                                    "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                                    java.util.Locale.US
+                                ).apply {
+                                    timeZone = java.util.TimeZone.getTimeZone("UTC")
+                                }.format(java.util.Date(crashEvent.timestamp))
+
+                                drivingRepository.reportAccident(
+                                    ridingRecordId = ridingRecordId,
+                                    lat = crashEvent.lat,
+                                    lon = crashEvent.lon,
+                                    ele = crashEvent.ele,
+                                    gravityForce = crashEvent.impactMagnitude.toDouble(),
+                                    leanAngle = crashEvent.leanAngle,
+                                    timestamp = isoTimestamp
+                                ).onSuccess {
+                                    Log.d("AppNavigation", "사고 보고 성공")
+                                }.onFailure { error ->
+                                    Log.e("AppNavigation", "사고 보고 실패: ${error.message}")
+                                }
+                            } else {
+                                Log.w("AppNavigation", "사고 보고 실패: ridingRecordId 또는 위치 정보 없음")
+                            }
+                        }
                     },
                 )
             }

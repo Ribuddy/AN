@@ -26,7 +26,7 @@ interface DrivingApi {
         @Header("Authorization") token: String,
         @Path("ridingRecordId") ridingRecordId: String,
         @Body location: LocationUpdateRequest,
-    ): Response<ApiResponse<List<TeamMemberLocation>>>
+    ): Response<ApiResponse<LocationUpdateResponse>>
 
     /**
      * 팀 라이딩 종료
@@ -67,4 +67,22 @@ interface DrivingApi {
     suspend fun getDrivingReport(
         @Query("ridingRecordId") ridingRecordId: String,
     ): Response<ApiResponse<RidingReportResponse>>
+
+    /**
+     * 사고 발생 보고
+     */
+    @POST("v1/driving/event/accident")
+    suspend fun reportAccident(
+        @Header("Authorization") token: String,
+        @Body request: AccidentReportRequest,
+    ): Response<ApiResponse<Unit>>
+
+    /**
+     * 급가속/급정거 보고
+     */
+    @POST("v1/driving/event/sudden-speed-change")
+    suspend fun reportSuddenSpeedChange(
+        @Header("Authorization") token: String,
+        @Body request: SuddenSpeedChangeReportRequest,
+    ): Response<ApiResponse<Unit>>
 }

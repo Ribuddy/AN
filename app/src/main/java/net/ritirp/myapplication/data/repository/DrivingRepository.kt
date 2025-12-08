@@ -127,9 +127,20 @@ class DrivingRepository(
             val response = drivingApi.updateLocationAndGetTeamLocations(token, ridingRecordId, request)
 
             if (response.isSuccessful && response.body()?.isSuccess == true) {
-                val locations = response.body()?.result ?: emptyList<TeamMemberLocation>()
+                // LocationUpdateResponse 객체에서 팀원 위치 배열 추출
+                val locationResponse = response.body()?.result
+                val locations = locationResponse?.teamMemberLocations ?: emptyList()
                 _teamMemberLocations.value = locations
+
                 Log.d("DrivingRepository", "위치 업데이트 성공, 팀원 수: ${locations.size}")
+
+                // 사고 정보가 있으면 로그 출력
+                locationResponse?.accidents?.let { accidents ->
+                    if (accidents.isNotEmpty()) {
+                        Log.w("DrivingRepository", "사고 발생: ${accidents.size}건")
+                    }
+                }
+
                 Result.success(locations)
             } else {
                 val errorMsg = response.body()?.message ?: "위치 업데이트 실패"
@@ -191,6 +202,90 @@ class DrivingRepository(
             }
         } catch (e: Exception) {
             Log.e("DrivingRepository", "라이딩 종료 오류: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * 사고 발생 보고
+     */
+    suspend fun reportAccident(
+        ridingRecordId: String,
+        lat: Double,
+        lon: Double,
+        ele: Double? = null,
+        gravityForce: Double? = null,
+        leanAngle: Double? = null,
+        timestamp: String? = null,
+    ): Result<Unit> {
+        return try {
+            val token = "Bearer ${getAccessToken()}"
+            val request = AccidentReportRequest(
+                lat = lat,
+                lon = lon,
+                ele = ele,
+                gravityForce = gravityForce,
+                leanAngle = leanAngle,
+                ridingRecordId = ridingRecordId,
+                timestamp = timestamp
+            )
+
+            Log.d("DrivingRepository", "사고 보고: ridingRecordId=$ridingRecordId, lat=$lat, lon=$lon, gravityForce=$gravityForce, leanAngle=$leanAngle")
+
+            val response = drivingApi.reportAccident(token, request)
+
+            if (response.isSuccessful && response.body()?.isSuccess == true) {
+                Log.d("DrivingRepository", "사고 보고 성공")
+                Result.success(Unit)
+            } else {
+                val errorMsg = response.body()?.message ?: "사고 보고 실패"
+                Log.e("DrivingRepository", "사고 보고 실패: $errorMsg")
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Log.e("DrivingRepository", "사고 보고 오류: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * 급가속/급정거 보고
+     */
+    suspend fun reportSuddenSpeedChange(
+        ridingRecordId: String,
+        lat: Double,
+        lon: Double,
+        ele: Double? = null,
+        gravityForce: Double? = null,
+        leanAngle: Double? = null,
+        timestamp: String? = null,
+    ): Result<Unit> {
+        return try {
+            val token = "Bearer ${getAccessToken()}"
+            val request = SuddenSpeedChangeReportRequest(
+                lat = lat,
+                lon = lon,
+                ele = ele,
+                gravityForce = gravityForce,
+                leanAngle = leanAngle,
+                ridingRecordId = ridingRecordId,
+                timestamp = timestamp
+            )
+
+            Log.d("DrivingRepository", "급가속/급정거 보고: ridingRecordId=$ridingRecordId, gravityForce=$gravityForce")
+
+            val response = drivingApi.reportSuddenSpeedChange(token, request)
+
+            if (response.isSuccessful && response.body()?.isSuccess == true) {
+                Log.d("DrivingRepository", "급가속/급정거 보고 성공")
+                Result.success(Unit)
+            } else {
+                val errorMsg = response.body()?.message ?: "급가속/급정거 보고 실패"
+                Log.e("DrivingRepository", "급가속/급정거 보고 실패: $errorMsg")
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Log.e("DrivingRepository", "급가속/급정거 보고 오류: ${e.message}", e)
             Result.failure(e)
         }
     }

@@ -168,20 +168,16 @@ data class RouteCoordinate(
 )
 
 /**
- * 내 라이딩 기록 목록 응답
+ * 내 라이딩 기록 목록 응답 (서버에서 직접 배열로 옴)
  */
-data class MyRidingRecordsResponse(
-    val records: List<RidingRecordSummary>?,
-)
+typealias MyRidingRecordsResponse = List<RidingRecordSummary>
 
 /**
  * 라이딩 기록 요약 (목록용)
  */
 data class RidingRecordSummary(
-    val ridingRecordId: String,
-    val startTime: String,
-    val endTime: String?,
-    val distanceMeters: Double,
-    val durationMillis: Long,
-    val maxSpeedKmh: Double,
+    val id: String, // 서버에서 "id"로 옴
+    val participants: List<String>?,
+    val teamId: String?,
+    val status: String?,
 )

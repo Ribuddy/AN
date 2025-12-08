@@ -61,17 +61,19 @@ class RidingReportViewModel(
             // 서버에서 내 라이딩 기록 목록 조회
             val result = ridingStatisticsRepository.getMyRidingRecords()
             if (result.isSuccess) {
-                val response = result.getOrNull()
-                val records = response?.records ?: emptyList()
-                val serverRecords = records.mapIndexed { index, summary ->
+                val summaryList = result.getOrNull() ?: emptyList()
+                android.util.Log.d("RidingReportViewModel", "서버에서 받은 주행 기록 수: ${summaryList.size}")
+
+                val serverRecords = summaryList.mapIndexed { index, summary ->
+                    android.util.Log.d("RidingReportViewModel", "주행 기록 #$index: id=${summary.id}, status=${summary.status}")
                     RidingRecordEntity(
                         id = index.toLong(),
-                        startTime = parseIsoTimestamp(summary.startTime),
-                        endTime = summary.endTime?.let { parseIsoTimestamp(it) },
-                        durationMillis = summary.durationMillis,
-                        distanceMeters = summary.distanceMeters,
+                        startTime = java.util.Date(), // 서버에서 시간 정보 없음, 임시로 현재 시간
+                        endTime = if (summary.status == "COMPLETED") java.util.Date() else null,
+                        durationMillis = 0L, // 서버에서 제공 안함
+                        distanceMeters = 0.0, // 서버에서 제공 안함
                         averageSpeedKmh = 0.0,
-                        maxSpeedKmh = summary.maxSpeedKmh,
+                        maxSpeedKmh = 0.0,
                         totalClimbMeters = 0.0,
                         totalFallMeters = 0.0,
                         maxLeanAngleDegrees = 0.0,
@@ -81,12 +83,15 @@ class RidingReportViewModel(
                         endLocationName = null,
                         endLat = null,
                         endLon = null,
-                        isCompleted = true,
+                        isCompleted = summary.status == "COMPLETED",
                         isSyncedToServer = true,
-                        serverRecordId = summary.ridingRecordId,
+                        serverRecordId = summary.id, // 서버의 "id" 필드 사용
                     )
                 }
                 _records.value = serverRecords
+                android.util.Log.d("RidingReportViewModel", "주행 기록 ${serverRecords.size}개 로드 완료")
+            } else {
+                android.util.Log.e("RidingReportViewModel", "주행 기록 로드 실패: ${result.exceptionOrNull()?.message}")
             }
         }
     }

@@ -410,7 +410,7 @@ object MapUtils {
     fun moveCameraToLocation(
         map: KakaoMap?,
         location: LocationData,
-        zoomLevel: Int = 13,
+        zoomLevel: Int = 11,
     ) {
         if (map == null) {
             println("DEBUG: Map is null, cannot move camera")

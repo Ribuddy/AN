@@ -367,24 +367,6 @@ fun PlaceholderScreen(
     }
 }
 
-private fun setupMap(
-    map: KakaoMap,
-    defaultLocation: LocationData,
-) {
-    val cameraPosition =
-        CameraPosition.from(
-            defaultLocation.latitude,
-            defaultLocation.longitude,
-            13,
-            0.0,
-            0.0,
-            0.0, // 줌 레벨을 13으로 조정
-        )
-    map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
-    map.moveCamera(CameraUpdateFactory.zoomTo(13)) // 줌 레벨을 13으로 변경
-    println("DEBUG: Map setup completed with zoom level 13 at ${defaultLocation.latitude}, ${defaultLocation.longitude}")
-}
-
 // 프리뷰용 컴포넌트들
 @Preview(showBackground = true, name = "지도 앱 프리뷰")
 @Composable
@@ -612,7 +594,7 @@ private fun MapContent(
             cameraUpdateEvent?.let { location ->
                 if (kakaoMap != null && isMapReady) {
                     println("DEBUG: Moving camera to current location: ${location.latitude}, ${location.longitude}")
-                    MapUtils.moveCameraToLocation(kakaoMap, location, 13) // 줌 레벨을 13으로 변경
+                    MapUtils.moveCameraToLocation(kakaoMap, location, 11) // 줌 레벨을 11로 변경
                     // 이벤트 처리 후 초기화 (무한 루프 방지)
                     vm.clearCameraUpdateEvent()
                 }
@@ -678,8 +660,16 @@ private fun MapContent(
                             kakaoMap = map
                             isMapReady = true
 
-                            // 초기 카메라 위치 설정
-                            setupMap(map, uiState.currentLocation)
+                            // 초기 카메라 위치 설정 (줌 레벨 11로 명시적 설정)
+                            val initialPosition = CameraPosition.from(
+                                uiState.currentLocation.latitude,
+                                uiState.currentLocation.longitude,
+                                11, // 줌 레벨 11
+                                0.0,
+                                0.0,
+                                0.0
+                            )
+                            map.moveCamera(CameraUpdateFactory.newCameraPosition(initialPosition))
 
                             // 지도 클릭 리스너 설정
                             map.setOnMapClickListener { _, latLng, _, _ ->

@@ -236,20 +236,68 @@ class RidingReportViewModel(
 
         return if (result.isSuccess) {
             val data = result.getOrNull()!!
-            // 연도별 데이터를 일별 형식으로 변환 (차트 표시용)
-            val dailyDistances = data.yearlyStats.take(7).map { stat ->
-                DailyDistance(
-                    dayOfWeek = stat.year.toString().substring(2), // "2025" -> "25"
-                    distanceKm = stat.distance,
+
+            // 연도별 데이터가 없으면 빈 차트 데이터 반환 (7개의 0 데이터)
+            if (data.yearlyStats.isEmpty()) {
+                val emptyDailyDistances = List(7) { index ->
+                    DailyDistance(
+                        dayOfWeek = (index + 1).toString(),
+                        distanceKm = 0.0,
+                    )
+                }
+                return RidingSummary(
+                    totalDistanceKm = 0.0,
+                    totalDurationMinutes = 0,
+                    dailyDistances = emptyDailyDistances,
                 )
             }
+
+            // 최근 7개 연도 데이터 준비
+            val sortedYears = data.yearlyStats.sortedByDescending { it.year }
+            val recentYears = sortedYears.take(7).reversed() // 오래된 순서로
+
+            // 데이터가 7개 미만이면 앞쪽을 0으로 채우기
+            val dailyDistances = mutableListOf<DailyDistance>()
+
+            // 부족한 개수만큼 0 데이터 추가
+            val paddingCount = (7 - recentYears.size).coerceAtLeast(0)
+            repeat(paddingCount) { index ->
+                dailyDistances.add(
+                    DailyDistance(
+                        dayOfWeek = "-",
+                        distanceKm = 0.0,
+                    )
+                )
+            }
+
+            // 실제 데이터 추가
+            recentYears.forEach { stat ->
+                dailyDistances.add(
+                    DailyDistance(
+                        dayOfWeek = stat.year.toString().takeLast(2), // "2025" -> "25"
+                        distanceKm = stat.distance,
+                    )
+                )
+            }
+
             RidingSummary(
                 totalDistanceKm = data.totalDistance,
                 totalDurationMinutes = data.totalDuration / 60, // 초를 분으로 변환
                 dailyDistances = dailyDistances,
             )
         } else {
-            RidingSummary()
+            // 실패 시에도 7개의 빈 데이터 반환
+            val emptyDailyDistances = List(7) { index ->
+                DailyDistance(
+                    dayOfWeek = (index + 1).toString(),
+                    distanceKm = 0.0,
+                )
+            }
+            RidingSummary(
+                totalDistanceKm = 0.0,
+                totalDurationMinutes = 0,
+                dailyDistances = emptyDailyDistances,
+            )
         }
     }
 

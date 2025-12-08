@@ -663,6 +663,7 @@ private fun MapContent(
     var kakaoMap by remember { mutableStateOf<KakaoMap?>(null) }
     var isMapReady by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // 카메라 이동 이벤트 감지
     viewModel?.let { vm ->
@@ -689,11 +690,31 @@ private fun MapContent(
         }
     }
 
-    // 친구 라벨 업데이트 (독립적)
-    LaunchedEffect(uiState.markers, isMapReady) {
+    // 사고 정보 수집
+    val drivingRepository = GlobalApplication.getDrivingRepository(context)
+    val accidents = drivingRepository.accidents.collectAsState().value
+    val accidentUserIds = remember(accidents) {
+        accidents.map { it.userId }.toSet()
+    }
+
+    // 친구 라벨 업데이트 (독립적) - 사고 정보 포함
+    LaunchedEffect(uiState.markers, accidentUserIds, isMapReady) {
         if (kakaoMap != null && isMapReady) {
             kakaoMap?.let { map ->
-                MapUtils.addTeamMarkers(map, uiState.markers, context)
+                MapUtils.addTeamMarkers(map, uiState.markers, context, accidentUserIds)
+            }
+        }
+    }
+
+    // 사고 알림 표시 (스낵바)
+    LaunchedEffect(accidents) {
+        if (accidents.isNotEmpty()) {
+            accidents.forEach { accident ->
+                val userName = accident.userName ?: "팀원"
+                snackbarHostState.showSnackbar(
+                    message = "⚠️ $userName 님이 사고를 당했습니다!",
+                    duration = SnackbarDuration.Long
+                )
             }
         }
     }
@@ -767,4 +788,24 @@ private fun MapContent(
             }
         },
     )
+
+    // 스낵바 호스트 - 화면 하단에 표시
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = 80.dp),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        ) { data ->
+            Snackbar(
+                snackbarData = data,
+                containerColor = Color(0xFFEF5350),
+                contentColor = Color.White,
+                shape = MaterialTheme.shapes.medium
+            )
+        }
+    }
 }

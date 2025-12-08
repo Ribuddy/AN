@@ -33,6 +33,9 @@ class DrivingRepository(
     private val _teamMemberLocations = MutableStateFlow<List<TeamMemberLocation>>(emptyList())
     val teamMemberLocations: StateFlow<List<TeamMemberLocation>> = _teamMemberLocations.asStateFlow()
 
+    private val _accidents = MutableStateFlow<List<AccidentInfo>>(emptyList())
+    val accidents: StateFlow<List<AccidentInfo>> = _accidents.asStateFlow()
+
     init {
         // 앱 시작 시 DataStore에서 이전 라이딩 기록 ID 복원
         CoroutineScope(Dispatchers.IO).launch {
@@ -134,10 +137,14 @@ class DrivingRepository(
 
                 Log.d("DrivingRepository", "위치 업데이트 성공, 팀원 수: ${locations.size}")
 
-                // 사고 정보가 있으면 로그 출력
-                locationResponse?.accidents?.let { accidents ->
-                    if (accidents.isNotEmpty()) {
-                        Log.w("DrivingRepository", "사고 발생: ${accidents.size}건")
+                // 사고 정보 처리
+                val accidents = locationResponse?.accidents ?: emptyList()
+                _accidents.value = accidents
+
+                if (accidents.isNotEmpty()) {
+                    Log.w("DrivingRepository", "⚠️ 사고 발생: ${accidents.size}건")
+                    accidents.forEach { accident ->
+                        Log.w("DrivingRepository", "  - 사고자: ${accident.userName ?: accident.userId} (위치: ${accident.lat}, ${accident.lon}, 시간: ${accident.timestamp})")
                     }
                 }
 

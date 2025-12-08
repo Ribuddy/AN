@@ -681,20 +681,29 @@ private fun MapContent(
         }
     }
 
-    // 내 위치 라벨 업데이트 (독립적)
-    LaunchedEffect(uiState.currentLocation, isMapReady) {
-        if (kakaoMap != null && isMapReady) {
-            kakaoMap?.let { map ->
-                MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation, context)
-            }
-        }
-    }
-
     // 사고 정보 수집
     val drivingRepository = GlobalApplication.getDrivingRepository(context)
     val accidents = drivingRepository.accidents.collectAsState().value
     val accidentUserIds = remember(accidents) {
         accidents.map { it.userId }.toSet()
+    }
+
+    // 내 userId 가져오기
+    val authRepository = GlobalApplication.getAuthRepository(context)
+    val myUserId by authRepository.getUserId().collectAsState(initial = null)
+
+    // 내가 사고를 당했는지 확인
+    val isMyAccident = remember(accidentUserIds, myUserId) {
+        myUserId != null && accidentUserIds.contains(myUserId)
+    }
+
+    // 내 위치 라벨 업데이트 (독립적) - 사고 정보 포함
+    LaunchedEffect(uiState.currentLocation, isMyAccident, isMapReady) {
+        if (kakaoMap != null && isMapReady) {
+            kakaoMap?.let { map ->
+                MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation, context, isMyAccident)
+            }
+        }
     }
 
     // 친구 라벨 업데이트 (독립적) - 사고 정보 포함
@@ -777,8 +786,8 @@ private fun MapContent(
                             }
 
                             // 초기 마커 표시 (경로는 LaunchedEffect에서 처리)
-                            MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation, context)
-                            MapUtils.addTeamMarkers(map, uiState.markers, context)
+                            MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation, context, isMyAccident)
+                            MapUtils.addTeamMarkers(map, uiState.markers, context, accidentUserIds)
                             uiState.destination?.let { dest ->
                                 MapUtils.addDestinationMarker(map, dest)
                             }

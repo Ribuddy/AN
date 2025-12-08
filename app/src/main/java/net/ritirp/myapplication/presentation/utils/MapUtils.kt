@@ -65,7 +65,7 @@ object MapUtils {
      */
     private fun getAccidentBitmap(context: Context): Bitmap? {
         if (cachedAccidentBitmap == null) {
-            cachedAccidentBitmap = vectorToBitmap(context, R.drawable.ic_accident_friend, 40)
+            cachedAccidentBitmap = vectorToBitmap(context, R.drawable.ic_accident_friend, 60)
             println("DEBUG: Accident bitmap cached")
         }
         return cachedAccidentBitmap
@@ -75,13 +75,15 @@ object MapUtils {
      * 내 위치 라벨 추가/업데이트 (layer_me)
      * - 레이어: layer_me
      * - 라벨 ID: "me"
-     * - 아이콘: Bitmap (R.drawable.ic_buddy)
-     * - 존재하면 moveTo로 업데이트, 없으면 생성
+     * - 아이콘: Bitmap (R.drawable.ic_buddy 또는 사고 시 R.drawable.ic_accident_friend)
+     * - 존재하면 삭제 후 재생성 (스타일 변경을 위해)
+     * @param isAccident 사고 발생 여부
      */
     fun addOrUpdateCurrentLocationMarker(
         map: KakaoMap?,
         location: LocationData,
         context: Context,
+        isAccident: Boolean = false,
     ) {
         if (map == null) {
             println("DEBUG: Map is null")
@@ -93,12 +95,12 @@ object MapUtils {
             return
         }
 
-        println("DEBUG: Updating my location label at ${location.latitude}, ${location.longitude}")
+        println("DEBUG: Updating my location label at ${location.latitude}, ${location.longitude}, accident=$isAccident")
 
         try {
-            // layer_me 레이어 가져오기 또는 생성
+            // layer_me 레이어 가져오기 또는 생성 (Z-Order를 낮춰서 팀원 마커 아래에 표시)
             val layer = labelManager.getLayer("layer_me") ?: run {
-                val layerOptions = LabelLayerOptions.from("layer_me").setZOrder(10002)
+                val layerOptions = LabelLayerOptions.from("layer_me").setZOrder(10001)
                 labelManager.addLayer(layerOptions)
             }
 
@@ -110,28 +112,36 @@ object MapUtils {
             val latLng = LatLng.from(location.latitude, location.longitude)
             val existingLabel = layer.getLabel("me")
 
-            if (existingLabel != null) {
-                // 이미 존재하면 moveTo로 위치만 업데이트 (깜빡임 없음)
-                existingLabel.moveTo(latLng)
-                println("DEBUG: My location label moved to new position")
+            // 적절한 비트맵 선택
+            val bitmap = if (isAccident) {
+                println("DEBUG: Using ACCIDENT bitmap for my location")
+                getAccidentBitmap(context)
             } else {
-                // 없으면 새로 생성
-                val buddyBitmap = getBuddyBitmap(context)
-                if (buddyBitmap == null) {
-                    println("DEBUG: Failed to get buddy bitmap")
-                    return
-                }
+                println("DEBUG: Using BUDDY bitmap for my location")
+                getBuddyBitmap(context)
+            }
 
-                val options = LabelOptions
-                    .from("me", latLng)
-                    .setStyles(buddyBitmap)
+            if (bitmap == null) {
+                println("DEBUG: Failed to get bitmap for my location")
+                return
+            }
 
-                val label = layer.addLabel(options)
-                if (label != null) {
-                    println("DEBUG: My location label created successfully with bitmap")
-                } else {
-                    println("DEBUG: Failed to create my location label")
-                }
+            // 기존 라벨이 있으면 삭제 (스타일 변경을 위해)
+            if (existingLabel != null) {
+                layer.remove(existingLabel)
+                println("DEBUG: Removed existing my location label for recreation")
+            }
+
+            // 새로 생성
+            val options = LabelOptions
+                .from("me", latLng)
+                .setStyles(bitmap)
+
+            val label = layer.addLabel(options)
+            if (label != null) {
+                println("DEBUG: ✅ My location label created with ${if (isAccident) "ACCIDENT" else "BUDDY"} icon")
+            } else {
+                println("DEBUG: ❌ Failed to create my location label")
             }
         } catch (e: Exception) {
             println("DEBUG: Exception while updating my location label: ${e.message}")
@@ -214,7 +224,7 @@ object MapUtils {
         try {
             // layer_buddies 레이어 가져오기 또는 생성
             val layer = labelManager.getLayer("layer_buddies") ?: run {
-                val layerOptions = LabelLayerOptions.from("layer_buddies").setZOrder(10001)
+                val layerOptions = LabelLayerOptions.from("layer_buddies").setZOrder(10003)
                 labelManager.addLayer(layerOptions)
             }
 

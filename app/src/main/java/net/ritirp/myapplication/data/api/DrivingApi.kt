@@ -59,4 +59,12 @@ interface DrivingApi {
      */
     @GET("v1/driving/statistics/yearly")
     suspend fun getYearlyStatistics(): Response<ApiResponse<YearlyStatisticsResponse>>
+
+    /**
+     * 주행 리포트 조회
+     */
+    @GET("v1/driving/team/report")
+    suspend fun getDrivingReport(
+        @Query("ridingRecordId") ridingRecordId: String,
+    ): Response<ApiResponse<RidingReportResponse>>
 }

@@ -127,3 +127,42 @@ data class YearlyStatistics(
     val duration: Long,
     val rideCount: Int,
 )
+
+/**
+ * 주행 리포트 응답 (서버에서 받아오는 개별 주행 데이터)
+ */
+data class RidingReportResponse(
+    val ridingRecordId: String,
+    val startTime: String,
+    val endTime: String?,
+    val startLocation: LocationInfo?,
+    val endLocation: LocationInfo?,
+    val distanceMeters: Double,
+    val durationMillis: Long,
+    val maxSpeedKmh: Double,
+    val avgSpeedKmh: Double,
+    val maxLeanAngleDegrees: Double,
+    val maxGravityForce: Double,
+    val totalClimbMeters: Double,
+    val totalFallMeters: Double,
+    val routeCoordinates: List<RouteCoordinate>?,
+)
+
+/**
+ * 위치 정보
+ */
+data class LocationInfo(
+    val name: String?,
+    val lat: Double,
+    val lon: Double,
+)
+
+/**
+ * 경로 좌표
+ */
+data class RouteCoordinate(
+    val lat: Double,
+    val lon: Double,
+    val ele: Double?,
+    val timestamp: String?,
+)

@@ -41,21 +41,91 @@ class RidingReportViewModel(
     private val localRidingRecordRepository: LocalRidingRecordRepository,
     private val ridingStatisticsRepository: net.ritirp.myapplication.data.repository.RidingStatisticsRepository,
 ) : ViewModel() {
-    // 최근 주행 기록 3개만 표시용으로 로컬에서 가져옴
-    val records: StateFlow<List<RidingRecordEntity>> =
-        localRidingRecordRepository
-            .getCompletedRecords()
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = emptyList(),
-            )
+    // 서버에서 가져온 주행 기록 목록 (UI 표시용)
+    private val _records = MutableStateFlow<List<RidingRecordEntity>>(emptyList())
+    val records: StateFlow<List<RidingRecordEntity>> = _records.asStateFlow()
 
     private val _uiState = MutableStateFlow(RidingReportUiState())
     val uiState: StateFlow<RidingReportUiState> = _uiState.asStateFlow()
 
     init {
         loadReportData()
+        loadRecentRidingRecords()
+    }
+
+    /**
+     * 서버에서 최근 주행 기록 목록을 가져오기
+     */
+    private fun loadRecentRidingRecords() {
+        viewModelScope.launch {
+            // TODO: 서버에 최근 주행 기록 목록 조회 API가 있다면 사용
+            // 임시로 로컬에 저장된 ridingRecordId 목록을 사용
+            val localRecords = localRidingRecordRepository.getCompletedRecords()
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5000),
+                    initialValue = emptyList(),
+                ).value
+
+            // 서버에서 각 주행 기록의 상세 데이터 가져오기
+            val serverRecords = mutableListOf<RidingRecordEntity>()
+            localRecords.take(10).forEach { localRecord ->
+                val serverRecordId = localRecord.serverRecordId
+                if (serverRecordId != null) {
+                    val reportResult = ridingStatisticsRepository.getRidingReport(serverRecordId)
+                    if (reportResult.isSuccess) {
+                        val report = reportResult.getOrNull()!!
+                        // 서버 응답을 RidingRecordEntity로 변환
+                        val entity = convertToEntity(report, localRecord.id)
+                        serverRecords.add(entity)
+                    }
+                }
+            }
+
+            _records.value = serverRecords
+        }
+    }
+
+    /**
+     * 서버 응답을 RidingRecordEntity로 변환
+     */
+    private fun convertToEntity(
+        report: net.ritirp.myapplication.data.model.RidingReportResponse,
+        localId: Long,
+    ): RidingRecordEntity {
+        return RidingRecordEntity(
+            id = localId,
+            startTime = parseIsoTimestamp(report.startTime),
+            endTime = report.endTime?.let { parseIsoTimestamp(it) },
+            durationMillis = report.durationMillis,
+            distanceMeters = report.distanceMeters,
+            averageSpeedKmh = report.avgSpeedKmh,
+            maxSpeedKmh = report.maxSpeedKmh,
+            totalClimbMeters = report.totalClimbMeters,
+            totalFallMeters = report.totalFallMeters,
+            maxLeanAngleDegrees = report.maxLeanAngleDegrees,
+            startLocationName = report.startLocation?.name,
+            startLat = report.startLocation?.lat ?: 0.0,
+            startLon = report.startLocation?.lon ?: 0.0,
+            endLocationName = report.endLocation?.name,
+            endLat = report.endLocation?.lat,
+            endLon = report.endLocation?.lon,
+            isCompleted = true,
+            isSyncedToServer = true,
+            serverRecordId = report.ridingRecordId,
+        )
+    }
+
+    /**
+     * ISO 8601 타임스탬프를 Date로 변환
+     */
+    private fun parseIsoTimestamp(timestamp: String): java.util.Date {
+        return try {
+            val formatter = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault())
+            formatter.parse(timestamp) ?: java.util.Date()
+        } catch (e: Exception) {
+            java.util.Date()
+        }
     }
 
     fun deleteRecord(record: RidingRecordEntity) {

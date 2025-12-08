@@ -138,12 +138,12 @@ class DrivingRepository(
                 Log.d("DrivingRepository", "위치 업데이트 성공, 팀원 수: ${locations.size}")
 
                 // 사고 정보 처리
-                val accidents = locationResponse?.accidents ?: emptyList()
-                _accidents.value = accidents
+                val ridingEvents = locationResponse?.ridingEvents ?: emptyList()
+                _accidents.value = ridingEvents
 
-                if (accidents.isNotEmpty()) {
-                    Log.w("DrivingRepository", "⚠️ 사고 발생: ${accidents.size}건")
-                    accidents.forEach { accident ->
+                if (ridingEvents.isNotEmpty()) {
+                    Log.w("DrivingRepository", "⚠️ 사고 발생: ${ridingEvents.size}건")
+                    ridingEvents.forEach { accident ->
                         Log.w("DrivingRepository", "  - 사고자: ${accident.userName ?: accident.userId} (위치: ${accident.lat}, ${accident.lon}, 시간: ${accident.timestamp})")
                     }
                 }

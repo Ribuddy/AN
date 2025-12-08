@@ -40,12 +40,16 @@ class MapRepository(
 
     /**
      * 팀원 위치를 마커로 업데이트
+     * @param accidentUserIds 사고난 팀원의 userId Set
      */
-    fun updateTeamMemberMarkers(teamMemberLocations: List<net.ritirp.myapplication.data.model.TeamMemberLocation>) {
+    fun updateTeamMemberMarkers(
+        teamMemberLocations: List<net.ritirp.myapplication.data.model.TeamMemberLocation>,
+        accidentUserIds: Set<String> = emptySet()
+    ) {
         val teamMarkers =
             teamMemberLocations.map { member ->
                 MarkerData(
-                    id = "team_${member.userId}",
+                    id = member.userId, // team_ 접두어 제거 (MapUtils에서 추가함)
                     location = LocationData(member.lat, member.lon),
                     title = member.memberName,
                     emoji = "👤",
@@ -53,7 +57,21 @@ class MapRepository(
                 )
             }
         _markers.value = teamMarkers
-        println("DEBUG: Updated team markers: ${teamMarkers.size} members")
+        println("DEBUG: Updated team markers: ${teamMarkers.size} members, accidents: ${accidentUserIds.size}")
+        if (accidentUserIds.isNotEmpty()) {
+            println("DEBUG: Accident user IDs: $accidentUserIds")
+        }
+    }
+
+    private val _accidentUserIds = MutableStateFlow<Set<String>>(emptySet())
+    val accidentUserIds: Flow<Set<String>> = _accidentUserIds.asStateFlow()
+
+    /**
+     * 사고난 팀원 ID 업데이트
+     */
+    fun updateAccidentUserIds(userIds: Set<String>) {
+        _accidentUserIds.value = userIds
+        println("DEBUG: Updated accident user IDs: $userIds")
     }
 
     /**

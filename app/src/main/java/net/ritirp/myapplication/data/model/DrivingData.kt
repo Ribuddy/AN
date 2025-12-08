@@ -80,8 +80,8 @@ enum class RidingStatus {
 
 // 위치 업데이트 응답 (팀 위치, 사고 정보, 경로 등 포함)
 data class LocationUpdateResponse(
-    @SerializedName("teamMemberLocations") val teamMemberLocations: List<TeamMemberLocation>? = null,
-    @SerializedName("accidents") val accidents: List<AccidentInfo>? = null,
+    @SerializedName("teammateLocations") val teamMemberLocations: List<TeamMemberLocation>? = null,
+    @SerializedName("ridingEvents") val ridingEvents: List<AccidentInfo>? = null,
     @SerializedName("route") val route: RouteInfo? = null,
 )
 

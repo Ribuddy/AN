@@ -137,10 +137,20 @@ class LocationUpdateManager(
                                     Log.d("LocationUpdateManager", "  - ${member.memberName}: lat=${member.lat}, lon=${member.lon}")
                                 }
 
+                                // 사고 정보 가져오기
+                                val accidents = drivingRepository.accidents.value
+                                val accidentUserIds = accidents.map { it.userId }.toSet()
+                                if (accidentUserIds.isNotEmpty()) {
+                                    Log.w("LocationUpdateManager", "⚠️ 사고난 팀원: $accidentUserIds")
+                                }
+
+                                // MapRepository에 사고 정보 업데이트
+                                mapRepository.updateAccidentUserIds(accidentUserIds)
+
                                 // MapRepository에 팀원 마커 업데이트
                                 if (locations.isNotEmpty()) {
                                     Log.d("LocationUpdateManager", "MapRepository에 ${locations.size}개 마커 업데이트 시작")
-                                    mapRepository.updateTeamMemberMarkers(locations)
+                                    mapRepository.updateTeamMemberMarkers(locations, accidentUserIds)
                                     Log.d("LocationUpdateManager", "MapRepository에 마커 업데이트 완료")
                                 } else {
                                     Log.d("LocationUpdateManager", "팀원이 없어 마커 클리어")

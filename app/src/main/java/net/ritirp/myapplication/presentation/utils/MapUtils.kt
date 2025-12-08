@@ -233,15 +233,17 @@ object MapUtils {
             teamMarkers.forEach { marker ->
                 val labelId = "buddy_${marker.id}"
                 val latLng = LatLng.from(marker.location.latitude, marker.location.longitude)
-                val existingLabel = layer.getLabel(labelId)
 
                 // 사고난 팀원인지 확인
                 val isAccident = accidentUserIds.contains(marker.id)
+                println("DEBUG: Processing marker ${marker.id}, isAccident=$isAccident, accidentUserIds=$accidentUserIds")
 
                 // 적절한 비트맵 선택
                 val bitmap = if (isAccident) {
+                    println("DEBUG: Using ACCIDENT bitmap for ${marker.id}")
                     getAccidentBitmap(context)
                 } else {
+                    println("DEBUG: Using BUDDY bitmap for ${marker.id}")
                     getBuddyBitmap(context)
                 }
 
@@ -250,25 +252,23 @@ object MapUtils {
                     return@forEach
                 }
 
+                // 기존 라벨이 있으면 항상 삭제 (스타일 변경을 위해)
+                val existingLabel = layer.getLabel(labelId)
                 if (existingLabel != null) {
-                    // 기존 라벨이 있으면 삭제하고 새로 생성 (스타일 변경을 위해)
                     layer.remove(existingLabel)
-                    println("DEBUG: Removed existing label $labelId for recreation")
+                    println("DEBUG: Removed existing label $labelId for recreation (accident: $isAccident)")
                 }
 
                 // 라벨 생성 (항상 새로 생성)
-                val textBuilder = LabelTextBuilder().setTexts(marker.emoji)
-
                 val options = LabelOptions
                     .from(labelId, latLng)
                     .setStyles(bitmap)
-                    .setTexts(textBuilder)
 
                 val label = layer.addLabel(options)
                 if (label != null) {
-                    println("DEBUG: Buddy label $labelId created (accident: $isAccident)")
+                    println("DEBUG: ✅ Buddy label $labelId created with ${if (isAccident) "ACCIDENT" else "BUDDY"} icon")
                 } else {
-                    println("DEBUG: Failed to create buddy label $labelId")
+                    println("DEBUG: ❌ Failed to create buddy label $labelId")
                 }
             }
 

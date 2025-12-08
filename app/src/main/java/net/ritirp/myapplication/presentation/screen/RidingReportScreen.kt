@@ -606,19 +606,8 @@ private fun BannerSection() {
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 20.dp)
-                .background(
-                    color = Color.White,
-                    shape = RoundedCornerShape(20.dp),
-                )
-                .padding(horizontal = 20.dp, vertical = 12.dp),
         ) {
-            Text(
-                text = "오늘도 안전 운전 하세요!",
-                fontSize = 14.sp,
-                color = Color.Black,
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Medium,
-            )
+            // "오늘도 안전 운전 하세요!" 텍스트는 PNG 이미지에 포함되어 있으므로 제거
         }
     }
 }
@@ -646,11 +635,6 @@ private fun MyRidingSection(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black,
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = Color.Black,
                 )
             }
         }
@@ -707,18 +691,28 @@ private fun PeriodFilterTabs(
     onFilterSelected: (PeriodFilter) -> Unit,
 ) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
     ) {
-        PeriodFilter.entries.forEach { filter ->
+        PeriodFilter.entries.forEachIndexed { index, filter ->
             val isSelected = filter == selectedFilter
+            val isFirst = index == 0
+            val isLast = index == PeriodFilter.entries.size - 1
+
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(
+                        when {
+                            isFirst -> RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+                            isLast -> RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
+                            else -> RoundedCornerShape(0.dp)
+                        }
+                    )
                     .background(
                         if (isSelected) Color.Black else Color(0xFFF5F5F5),
                     )
                     .clickable { onFilterSelected(filter) }
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
             ) {
                 Text(
                     text = when (filter) {

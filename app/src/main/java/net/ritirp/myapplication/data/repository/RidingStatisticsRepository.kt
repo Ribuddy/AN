@@ -3,6 +3,7 @@ package net.ritirp.myapplication.data.repository
 import android.util.Log
 import net.ritirp.myapplication.data.api.DrivingApi
 import net.ritirp.myapplication.data.model.MonthlyStatisticsResponse
+import net.ritirp.myapplication.data.model.MyRidingRecordsResponse
 import net.ritirp.myapplication.data.model.RidingReportResponse
 import net.ritirp.myapplication.data.model.WeeklyStatisticsResponse
 import net.ritirp.myapplication.data.model.YearlyStatisticsResponse
@@ -104,6 +105,29 @@ class RidingStatisticsRepository(
             }
         } catch (e: Exception) {
             Log.e("RidingStatisticsRepository", "주행 리포트 조회 오류", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * 내 라이딩 기록 목록 조회
+     */
+    suspend fun getMyRidingRecords(): Result<MyRidingRecordsResponse> {
+        return try {
+            val response = drivingApi.getMyRidingRecords()
+            if (response.isSuccessful && response.body() != null) {
+                val apiResponse = response.body()!!
+                val data = apiResponse.result
+                if (data != null) {
+                    Result.success(data)
+                } else {
+                    Result.failure(Exception("라이딩 기록 목록 데이터가 null입니다"))
+                }
+            } else {
+                Result.failure(Exception("라이딩 기록 목록 조회 실패: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Log.e("RidingStatisticsRepository", "라이딩 기록 목록 조회 오류", e)
             Result.failure(e)
         }
     }

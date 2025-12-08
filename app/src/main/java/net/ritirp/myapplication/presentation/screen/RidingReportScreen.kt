@@ -59,21 +59,32 @@ fun RidingReportScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showRecordList by remember { mutableStateOf(false) }
-    var selectedRecordId by remember { mutableStateOf<Long?>(null) }
+    var selectedRecordId by remember { mutableStateOf<String?>(null) }
+    var selectedRecordDetail by remember { mutableStateOf<RidingRecordEntity?>(null) }
     val records by viewModel.records.collectAsStateWithLifecycle()
 
-    // 상세 화면이 선택되면 상세 화면 표시
-    if (selectedRecordId != null) {
-        val selectedRecord = records.find { it.id == selectedRecordId }
-        if (selectedRecord != null) {
-            RidingReportDetailScreen(
-                record = selectedRecord,
-                viewModel = viewModel,
-                onBack = { selectedRecordId = null },
-                modifier = modifier,
-            )
-            return
+    // 상세 화면이 선택되면 서버에서 상세 정보 가져오기
+    LaunchedEffect(selectedRecordId) {
+        if (selectedRecordId != null) {
+            val detail = viewModel.loadRecordDetail(selectedRecordId!!)
+            selectedRecordDetail = detail
+        } else {
+            selectedRecordDetail = null
         }
+    }
+
+    // 상세 화면 표시
+    if (selectedRecordDetail != null) {
+        RidingReportDetailScreen(
+            record = selectedRecordDetail!!,
+            viewModel = viewModel,
+            onBack = {
+                selectedRecordId = null
+                selectedRecordDetail = null
+            },
+            modifier = modifier,
+        )
+        return
     }
 
     // 리스트 화면이 선택되면 리스트 표시
@@ -258,7 +269,7 @@ private fun RecordStatItem(
 @Composable
 private fun RidingRecordListScreen(
     records: List<RidingRecordEntity>,
-    onRecordClick: (Long) -> Unit,
+    onRecordClick: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -326,7 +337,9 @@ private fun RidingRecordListScreen(
                 records.forEach { record ->
                     RidingRecordListItem(
                         record = record,
-                        onClick = { onRecordClick(record.id) },
+                        onClick = {
+                            record.serverRecordId?.let { onRecordClick(it) }
+                        },
                     )
                 }
             }
@@ -341,7 +354,7 @@ private fun RidingRecordListScreen(
 private fun RecentRidingRecordsSection(
     records: List<RidingRecordEntity>,
     onSeeAllClick: () -> Unit,
-    onRecordClick: (Long) -> Unit,
+    onRecordClick: (String) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -394,7 +407,9 @@ private fun RecentRidingRecordsSection(
                 records.forEach { record ->
                     RecentRecordItem(
                         record = record,
-                        onClick = { onRecordClick(record.id) },
+                        onClick = {
+                            record.serverRecordId?.let { onRecordClick(it) }
+                        },
                     )
                 }
             }
@@ -477,17 +492,10 @@ private fun RidingReportDetailScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         ) {
-            // 배너 섹션 (오토바이 라이더 이미지 + 메시지)
-            BannerSection()
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 내 주행 섹션
-            MyRidingSection(
-                summary = uiState.ridingSummary,
-                selectedFilter = uiState.periodFilter,
-                onFilterSelected = { viewModel.setPeriodFilter(it) },
-            )
+            // 주행 기록 정보 섹션
+            RidingRecordDetailSection(record = record)
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -542,6 +550,192 @@ private fun DetailTopAppBar(
             modifier = Modifier.align(Alignment.Center),
         )
     }
+}
+
+/**
+ * 주행 기록 상세 정보 섹션 (이미지와 동일한 UI)
+ */
+@Composable
+private fun RidingRecordDetailSection(record: RidingRecordEntity) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(16.dp),
+    ) {
+        // 주행 기록 타이틀
+        Text(
+            text = "주행 기록",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black,
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 주행 통계 카드
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+            ) {
+                // 첫 번째 행: 거리, 시간, 평균 속도
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    DetailStatColumn(
+                        value = String.format("%.1fkm", record.distanceMeters / 1000.0),
+                        label = "Distance",
+                    )
+                    DetailStatColumn(
+                        value = formatDurationDetail(record.durationMillis),
+                        label = "Duration",
+                    )
+                    DetailStatColumn(
+                        value = String.format("%.1fkm/h", record.averageSpeedKmh),
+                        label = "Avg Speed",
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 두 번째 행: 최고 속도, 상승/하강
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    DetailStatColumnWithIcon(
+                        icon = "🏃",
+                        value = String.format("%.1fkm/h", record.maxSpeedKmh),
+                        label = "Top speed",
+                    )
+                    DetailStatColumnWithIcon(
+                        icon = "⬆️",
+                        value = String.format("%.0fm", record.totalClimbMeters),
+                        label = "Climb/Fall",
+                    )
+                    DetailStatColumnWithIcon(
+                        icon = "⬇️",
+                        value = String.format("%.0fm", record.totalFallMeters),
+                        label = "",
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 세 번째 행: 시작 시간, 기울기
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    DetailStatColumnWithIcon(
+                        icon = "🕐",
+                        value = formatTimeDetail(record.startTime.time),
+                        label = "Start",
+                    )
+                    DetailStatColumnWithIcon(
+                        icon = "↩️",
+                        value = String.format("%.0f°", record.maxLeanAngleDegrees),
+                        label = "Lean Angle (°)",
+                    )
+                    DetailStatColumnWithIcon(
+                        icon = "↪️",
+                        value = String.format("%.0f", record.maxLeanAngleDegrees),
+                        label = "",
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 상세 통계 열 (값 + 라벨)
+ */
+@Composable
+private fun DetailStatColumn(
+    value: String,
+    label: String,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = value,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = Color.Gray,
+        )
+    }
+}
+
+/**
+ * 상세 통계 열 (아이콘 + 값 + 라벨)
+ */
+@Composable
+private fun DetailStatColumnWithIcon(
+    icon: String,
+    value: String,
+    label: String,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(text = icon, fontSize = 16.sp)
+            Text(
+                text = value,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+            )
+        }
+        if (label.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                color = Color.Gray,
+            )
+        }
+    }
+}
+
+/**
+ * 시간 포맷팅 (상세용, 11:22AM)
+ */
+private fun formatTimeDetail(timeMillis: Long): String {
+    val calendar = Calendar.getInstance()
+    calendar.timeInMillis = timeMillis
+    val hour = calendar.get(Calendar.HOUR_OF_DAY)
+    val minute = calendar.get(Calendar.MINUTE)
+    val amPm = if (hour < 12) "AM" else "PM"
+    val hour12 = if (hour == 0) 12 else if (hour > 12) hour - 12 else hour
+    return String.format("%d:%02d%s", hour12, minute, amPm)
+}
+
+/**
+ * 시간 포맷팅 (상세용, 02h 38m)
+ */
+private fun formatDurationDetail(durationMillis: Long): String {
+    val minutes = durationMillis / 60000
+    val hours = minutes / 60
+    val mins = minutes % 60
+    return String.format("%02dh %02dm", hours, mins)
 }
 
 /**

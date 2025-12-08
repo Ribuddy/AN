@@ -58,31 +58,36 @@ class RidingReportViewModel(
      */
     private fun loadRecentRidingRecords() {
         viewModelScope.launch {
-            // TODO: 서버에 최근 주행 기록 목록 조회 API가 있다면 사용
-            // 임시로 로컬에 저장된 ridingRecordId 목록을 사용
-            val localRecords = localRidingRecordRepository.getCompletedRecords()
-                .stateIn(
-                    scope = viewModelScope,
-                    started = SharingStarted.WhileSubscribed(5000),
-                    initialValue = emptyList(),
-                ).value
-
-            // 서버에서 각 주행 기록의 상세 데이터 가져오기
-            val serverRecords = mutableListOf<RidingRecordEntity>()
-            localRecords.take(10).forEach { localRecord ->
-                val serverRecordId = localRecord.serverRecordId
-                if (serverRecordId != null) {
-                    val reportResult = ridingStatisticsRepository.getRidingReport(serverRecordId)
-                    if (reportResult.isSuccess) {
-                        val report = reportResult.getOrNull()!!
-                        // 서버 응답을 RidingRecordEntity로 변환
-                        val entity = convertToEntity(report, localRecord.id)
-                        serverRecords.add(entity)
-                    }
+            // 서버에서 내 라이딩 기록 목록 조회
+            val result = ridingStatisticsRepository.getMyRidingRecords()
+            if (result.isSuccess) {
+                val response = result.getOrNull()
+                val records = response?.records ?: emptyList()
+                val serverRecords = records.mapIndexed { index, summary ->
+                    RidingRecordEntity(
+                        id = index.toLong(),
+                        startTime = parseIsoTimestamp(summary.startTime),
+                        endTime = summary.endTime?.let { parseIsoTimestamp(it) },
+                        durationMillis = summary.durationMillis,
+                        distanceMeters = summary.distanceMeters,
+                        averageSpeedKmh = 0.0,
+                        maxSpeedKmh = summary.maxSpeedKmh,
+                        totalClimbMeters = 0.0,
+                        totalFallMeters = 0.0,
+                        maxLeanAngleDegrees = 0.0,
+                        startLocationName = null,
+                        startLat = 0.0,
+                        startLon = 0.0,
+                        endLocationName = null,
+                        endLat = null,
+                        endLon = null,
+                        isCompleted = true,
+                        isSyncedToServer = true,
+                        serverRecordId = summary.ridingRecordId,
+                    )
                 }
+                _records.value = serverRecords
             }
-
-            _records.value = serverRecords
         }
     }
 
@@ -131,6 +136,19 @@ class RidingReportViewModel(
     fun deleteRecord(record: RidingRecordEntity) {
         viewModelScope.launch {
             localRidingRecordRepository.deleteRecord(record)
+        }
+    }
+
+    /**
+     * 선택한 주행 기록의 상세 정보를 서버에서 가져오기
+     */
+    suspend fun loadRecordDetail(ridingRecordId: String): RidingRecordEntity? {
+        val result = ridingStatisticsRepository.getRidingReport(ridingRecordId)
+        return if (result.isSuccess) {
+            val report = result.getOrNull()!!
+            convertToEntity(report, 0L)
+        } else {
+            null
         }
     }
 

@@ -166,3 +166,22 @@ data class RouteCoordinate(
     val ele: Double?,
     val timestamp: String?,
 )
+
+/**
+ * 내 라이딩 기록 목록 응답
+ */
+data class MyRidingRecordsResponse(
+    val records: List<RidingRecordSummary>?,
+)
+
+/**
+ * 라이딩 기록 요약 (목록용)
+ */
+data class RidingRecordSummary(
+    val ridingRecordId: String,
+    val startTime: String,
+    val endTime: String?,
+    val distanceMeters: Double,
+    val durationMillis: Long,
+    val maxSpeedKmh: Double,
+)

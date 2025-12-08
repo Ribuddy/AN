@@ -69,6 +69,12 @@ interface DrivingApi {
     ): Response<ApiResponse<RidingReportResponse>>
 
     /**
+     * 내 라이딩 기록 목록 조회
+     */
+    @GET("v1/driving/team/my-records")
+    suspend fun getMyRidingRecords(): Response<ApiResponse<MyRidingRecordsResponse>>
+
+    /**
      * 사고 발생 보고
      */
     @POST("v1/driving/event/accident")

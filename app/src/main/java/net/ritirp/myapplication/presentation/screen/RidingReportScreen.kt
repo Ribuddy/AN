@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material3.*
@@ -536,10 +537,10 @@ private fun DetailTopAppBar(
             onClick = onBack,
             modifier = Modifier.align(Alignment.CenterStart),
         ) {
-            Text(
-                text = "←",
-                fontSize = 24.sp,
-                color = Color.Black,
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "뒤로가기",
+                tint = Color.Black,
             )
         }
         Text(

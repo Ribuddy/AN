@@ -132,20 +132,43 @@ data class YearlyStatistics(
  * 주행 리포트 응답 (서버에서 받아오는 개별 주행 데이터)
  */
 data class RidingReportResponse(
-    val ridingRecordId: String,
-    val startTime: String,
-    val endTime: String?,
-    val startLocation: LocationInfo?,
-    val endLocation: LocationInfo?,
-    val distanceMeters: Double,
-    val durationMillis: Long,
-    val maxSpeedKmh: Double,
-    val avgSpeedKmh: Double,
-    val maxLeanAngleDegrees: Double,
-    val maxGravityForce: Double,
-    val totalClimbMeters: Double,
-    val totalFallMeters: Double,
-    val routeCoordinates: List<RouteCoordinate>?,
+    val distance: Double,      // meters
+    val duration: Long,        // seconds
+    val topSpeed: Double,      // km/h
+    val climb: Double,         // meters
+    val fall: Double,          // meters
+    val maxLeftLean: Double,   // degrees
+    val maxRightLean: Double,  // degrees
+    val drivingScore: DrivingScoreInfo?,
+)
+
+/**
+ * 주행 점수 정보
+ */
+data class DrivingScoreInfo(
+    val maneuverScore: Int,
+    val stabilityScore: Int,
+    val finalScore: Double,
+    val speedWarning: SpeedWarning?,
+    val improvementPoints: List<ImprovementPointInfo>?,
+)
+
+/**
+ * 속도 경고
+ */
+data class SpeedWarning(
+    val level: String,
+    val message: String,
+)
+
+/**
+ * 개선 포인트 정보
+ */
+data class ImprovementPointInfo(
+    val category: String,
+    val title: String,
+    val description: String,
+    val severity: String,
 )
 
 /**

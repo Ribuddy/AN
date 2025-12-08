@@ -478,12 +478,12 @@ private fun RidingReportDetailScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.White),
+            .background(Color(0xFFF8F9FA)), // 밝은 회색 배경
     ) {
         // 상단 타이틀 (뒤로가기 버튼 포함)
         DetailTopAppBar(
             onBack = onBack,
-            title = formatDateTime(record.startTime.time),
+            title = formatDateKorean(record.startTime.time), // 한국어 날짜 포맷
         )
 
         // 스크롤 가능한 콘텐츠
@@ -529,8 +529,8 @@ private fun DetailTopAppBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.Black)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .background(Color.White)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         IconButton(
             onClick = onBack,
@@ -539,14 +539,14 @@ private fun DetailTopAppBar(
             Text(
                 text = "←",
                 fontSize = 24.sp,
-                color = Color.White,
+                color = Color.Black,
             )
         }
         Text(
             text = title,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White,
+            color = Color.Black,
             modifier = Modifier.align(Alignment.Center),
         )
     }
@@ -604,7 +604,7 @@ private fun RidingRecordDetailSection(record: RidingRecordEntity) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 두 번째 행: 최고 속도
+                // 두 번째 행: 최고 속도, 상승/하강
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -614,16 +614,20 @@ private fun RidingRecordDetailSection(record: RidingRecordEntity) {
                         label = "Top speed",
                     )
 
-                    // Climb/Fall (상승/하강)
+                    // Climb (상승) - 초록색
                     DetailStatColumnWithDrawableIcon(
                         iconResId = R.drawable.ic_up,
                         value = String.format("%.0fm", record.totalClimbMeters),
-                        label = "Climb/Fall",
+                        label = "Climb",
+                        iconTint = Color(0xFF10B981), // 초록색
                     )
+
+                    // Fall (하강) - 빨간색
                     DetailStatColumnWithDrawableIcon(
                         iconResId = R.drawable.ic_down,
                         value = String.format("%.0fm", record.totalFallMeters),
-                        label = "",
+                        label = "Fall",
+                        iconTint = Color(0xFFEF4444), // 빨간색
                     )
                 }
 
@@ -639,16 +643,20 @@ private fun RidingRecordDetailSection(record: RidingRecordEntity) {
                         label = "Start",
                     )
 
-                    // Lean Angle (기울기)
+                    // Lean Angle 왼쪽
                     DetailStatColumnWithDrawableIcon(
                         iconResId = R.drawable.ic_left2right,
                         value = String.format("%.0f°", record.maxLeanAngleDegrees),
                         label = "Lean Angle (°)",
+                        iconTint = Color(0xFF6B7280), // 회색
                     )
+
+                    // Lean Angle 오른쪽
                     DetailStatColumnWithDrawableIcon(
                         iconResId = R.drawable.ic_right2left,
                         value = String.format("%.0f°", record.maxLeanAngleDegrees),
                         label = "",
+                        iconTint = Color(0xFF6B7280), // 회색
                     )
                 }
             }
@@ -690,6 +698,7 @@ private fun DetailStatColumnWithDrawableIcon(
     iconResId: Int,
     value: String,
     label: String,
+    iconTint: Color = Color(0xFF6B7280), // 기본값: 회색
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -702,7 +711,7 @@ private fun DetailStatColumnWithDrawableIcon(
                 painter = painterResource(id = iconResId),
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
-                tint = Color(0xFF6B7280),
+                tint = iconTint,
             )
             Text(
                 text = value,
@@ -736,13 +745,35 @@ private fun formatTimeDetail(timeMillis: Long): String {
 }
 
 /**
- * 시간 포맷팅 (상세용, 02h 38m)
+ * 시간 포맷팅 (상세용, 49초는 "0m 49s", 1시간 이상은 "02h 38m")
  */
 private fun formatDurationDetail(durationMillis: Long): String {
-    val minutes = durationMillis / 60000
-    val hours = minutes / 60
-    val mins = minutes % 60
-    return String.format("%02dh %02dm", hours, mins)
+    val totalSeconds = durationMillis / 1000
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+
+    return if (hours > 0) {
+        String.format("%dh %dm", hours, minutes)
+    } else if (minutes > 0) {
+        String.format("%dm %ds", minutes, seconds)
+    } else {
+        String.format("%ds", seconds)
+    }
+}
+
+/**
+ * 한국어 날짜 포맷팅 (2025년 12월 6일)
+ */
+private fun formatDateKorean(timeMillis: Long): String {
+    val calendar = Calendar.getInstance()
+    calendar.timeInMillis = timeMillis
+    return String.format(
+        "%d년 %d월 %d일",
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH) + 1,
+        calendar.get(Calendar.DAY_OF_MONTH),
+    )
 }
 
 /**

@@ -102,27 +102,28 @@ class RidingReportViewModel(
     private fun convertToEntity(
         report: net.ritirp.myapplication.data.model.RidingReportResponse,
         localId: Long,
+        ridingRecordId: String,
     ): RidingRecordEntity {
         return RidingRecordEntity(
             id = localId,
-            startTime = parseIsoTimestamp(report.startTime),
-            endTime = report.endTime?.let { parseIsoTimestamp(it) },
-            durationMillis = report.durationMillis,
-            distanceMeters = report.distanceMeters,
-            averageSpeedKmh = report.avgSpeedKmh,
-            maxSpeedKmh = report.maxSpeedKmh,
-            totalClimbMeters = report.totalClimbMeters,
-            totalFallMeters = report.totalFallMeters,
-            maxLeanAngleDegrees = report.maxLeanAngleDegrees,
-            startLocationName = report.startLocation?.name,
-            startLat = report.startLocation?.lat ?: 0.0,
-            startLon = report.startLocation?.lon ?: 0.0,
-            endLocationName = report.endLocation?.name,
-            endLat = report.endLocation?.lat,
-            endLon = report.endLocation?.lon,
+            startTime = java.util.Date(), // 서버에서 시간 정보 없음
+            endTime = java.util.Date(),
+            durationMillis = report.duration * 1000, // 초를 밀리초로
+            distanceMeters = report.distance,
+            averageSpeedKmh = if (report.duration > 0) (report.distance / report.duration * 3.6) else 0.0,
+            maxSpeedKmh = report.topSpeed,
+            totalClimbMeters = report.climb,
+            totalFallMeters = report.fall,
+            maxLeanAngleDegrees = maxOf(report.maxLeftLean, report.maxRightLean),
+            startLocationName = null,
+            startLat = 0.0,
+            startLon = 0.0,
+            endLocationName = null,
+            endLat = null,
+            endLon = null,
             isCompleted = true,
             isSyncedToServer = true,
-            serverRecordId = report.ridingRecordId,
+            serverRecordId = ridingRecordId,
         )
     }
 
@@ -151,7 +152,37 @@ class RidingReportViewModel(
         val result = ridingStatisticsRepository.getRidingReport(ridingRecordId)
         return if (result.isSuccess) {
             val report = result.getOrNull()!!
-            convertToEntity(report, 0L)
+
+            // 주행 점수 업데이트
+            val drivingScore = report.drivingScore
+            if (drivingScore != null) {
+                val ridingScore = RidingScore(
+                    totalScore = drivingScore.finalScore.toInt(),
+                    operationSafetyScore = drivingScore.maneuverScore,
+                    speedSafetyScore = drivingScore.maneuverScore, // 서버에서 별도 제공 안함
+                    leanStabilityScore = drivingScore.stabilityScore,
+                )
+
+                // 개선 포인트 변환
+                val improvements = drivingScore.improvementPoints?.map { point ->
+                    ImprovementPoint(
+                        category = when (point.category) {
+                            "maneuver" -> ImprovementCategory.OPERATION
+                            "stability" -> ImprovementCategory.LEAN_STABILITY
+                            else -> ImprovementCategory.SPEED
+                        },
+                        title = point.title,
+                        description = point.description,
+                    )
+                } ?: emptyList()
+
+                _uiState.value = _uiState.value.copy(
+                    ridingScore = ridingScore,
+                    improvementPoints = improvements,
+                )
+            }
+
+            convertToEntity(report, 0L, ridingRecordId)
         } else {
             null
         }

@@ -63,3 +63,67 @@ enum class ScoreFilter {
     TOTAL,
     MONTH,
 }
+
+/**
+ * API 응답 모델 - 주간 통계
+ */
+data class WeeklyStatisticsResponse(
+    val startDate: String,
+    val endDate: String,
+    val totalDistance: Double,
+    val totalDuration: Long,
+    val totalRideCount: Int,
+    val dailyStats: List<DailyStatistics>,
+)
+
+/**
+ * API 응답 모델 - 월간 통계
+ */
+data class MonthlyStatisticsResponse(
+    val year: Int,
+    val totalDistance: Double,
+    val totalDuration: Long,
+    val totalRideCount: Int,
+    val monthlyStats: List<MonthlyStatistics>,
+)
+
+/**
+ * API 응답 모델 - 연간 통계
+ */
+data class YearlyStatisticsResponse(
+    val totalDistance: Double,
+    val totalDuration: Long,
+    val totalRideCount: Int,
+    val yearlyStats: List<YearlyStatistics>,
+)
+
+/**
+ * 일별 통계
+ */
+data class DailyStatistics(
+    val date: String,
+    val dayOfWeek: String,
+    val distance: Double,
+    val duration: Long,
+    val rideCount: Int,
+)
+
+/**
+ * 월별 통계
+ */
+data class MonthlyStatistics(
+    val month: String,
+    val distance: Double,
+    val duration: Long,
+    val rideCount: Int,
+)
+
+/**
+ * 연도별 통계
+ */
+data class YearlyStatistics(
+    val year: Int,
+    val distance: Double,
+    val duration: Long,
+    val rideCount: Int,
+)

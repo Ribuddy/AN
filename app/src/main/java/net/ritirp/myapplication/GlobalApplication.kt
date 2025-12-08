@@ -14,6 +14,7 @@ import net.ritirp.myapplication.data.repository.AuthRepository
 import net.ritirp.myapplication.data.repository.CrashSettingsRepository
 import net.ritirp.myapplication.data.repository.FriendRepository
 import net.ritirp.myapplication.data.repository.MapRepository
+import net.ritirp.myapplication.data.repository.RidingStatisticsRepository
 import net.ritirp.myapplication.data.repository.TeamRepository
 import net.ritirp.myapplication.data.repository.UserRepository
 import net.ritirp.myapplication.service.AppVisibilityObserver
@@ -58,6 +59,9 @@ class GlobalApplication : Application() {
         private set
 
     lateinit var localRidingRecordRepository: net.ritirp.myapplication.data.repository.LocalRidingRecordRepository
+        private set
+
+    lateinit var ridingStatisticsRepository: RidingStatisticsRepository
         private set
 
     lateinit var leanAngleSensorManager: net.ritirp.myapplication.service.LeanAngleSensorManager
@@ -109,6 +113,11 @@ class GlobalApplication : Application() {
 
         // 로컬 주행 기록 저장소 초기화 (Room DB)
         localRidingRecordRepository = net.ritirp.myapplication.data.repository.LocalRidingRecordRepository(this)
+
+        // 주행 통계 저장소 초기화 (API 기반)
+        ridingStatisticsRepository = RidingStatisticsRepository(
+            net.ritirp.myapplication.data.api.RetrofitClient.drivingApi
+        )
 
         // 기울기 각도 센서 매니저 초기화
         leanAngleSensorManager = net.ritirp.myapplication.service.LeanAngleSensorManager(this)
@@ -197,6 +206,10 @@ class GlobalApplication : Application() {
 
         fun getLocalRidingRecordRepository(context: Context): net.ritirp.myapplication.data.repository.LocalRidingRecordRepository {
             return (context.applicationContext as GlobalApplication).localRidingRecordRepository
+        }
+
+        fun getRidingStatisticsRepository(context: Context): RidingStatisticsRepository {
+            return (context.applicationContext as GlobalApplication).ridingStatisticsRepository
         }
 
         fun getLeanAngleSensorManager(context: Context): net.ritirp.myapplication.service.LeanAngleSensorManager {

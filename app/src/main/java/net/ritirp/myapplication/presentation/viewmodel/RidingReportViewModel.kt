@@ -39,7 +39,9 @@ data class RidingReportUiState(
  */
 class RidingReportViewModel(
     private val localRidingRecordRepository: LocalRidingRecordRepository,
+    private val ridingStatisticsRepository: net.ritirp.myapplication.data.repository.RidingStatisticsRepository,
 ) : ViewModel() {
+    // 최근 주행 기록 3개만 표시용으로 로컬에서 가져옴
     val records: StateFlow<List<RidingRecordEntity>> =
         localRidingRecordRepository
             .getCompletedRecords()
@@ -76,9 +78,15 @@ class RidingReportViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
-            // 현재 기록들을 기반으로 통계 계산
+            // 서버 API에서 통계 데이터 가져오기
+            val summary = when (_uiState.value.periodFilter) {
+                PeriodFilter.WEEK -> fetchWeeklyStatistics()
+                PeriodFilter.MONTH -> fetchMonthlyStatistics()
+                PeriodFilter.YEAR -> fetchYearlyStatistics()
+            }
+
+            // 임시로 점수와 개선사항은 더미 데이터 사용
             val currentRecords = records.value
-            val summary = calculateSummary(currentRecords, _uiState.value.periodFilter)
             val score = calculateScore(currentRecords)
             val improvements = calculateImprovements(currentRecords)
 
@@ -99,44 +107,80 @@ class RidingReportViewModel(
         }
     }
 
-    private fun calculateSummary(records: List<RidingRecordEntity>, filter: PeriodFilter): RidingSummary {
-        val calendar = Calendar.getInstance()
-        val now = calendar.timeInMillis
-
-        val filteredRecords = records.filter { record ->
-            val recordTime = record.startTime.time
-            when (filter) {
-                PeriodFilter.WEEK -> now - recordTime <= 7 * 24 * 60 * 60 * 1000L
-                PeriodFilter.MONTH -> now - recordTime <= 30 * 24 * 60 * 60 * 1000L
-                PeriodFilter.YEAR -> now - recordTime <= 365 * 24 * 60 * 60 * 1000L
+    /**
+     * 주간 통계를 서버에서 가져오기
+     */
+    private suspend fun fetchWeeklyStatistics(): RidingSummary {
+        val result = ridingStatisticsRepository.getWeeklyStatistics()
+        return if (result.isSuccess) {
+            val data = result.getOrNull()!!
+            val dailyDistances = data.dailyStats.map { stat ->
+                DailyDistance(
+                    dayOfWeek = stat.dayOfWeek,
+                    distanceKm = stat.distance,
+                )
             }
-        }
-
-        val totalDistanceKm = filteredRecords.sumOf { it.distanceMeters / 1000 }
-        val totalDurationMinutes = filteredRecords.sumOf { it.durationMillis / 60000 }
-
-        // 요일별 거리 계산
-        val dayNames = listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")
-        val dailyDistances = dayNames.mapIndexed { index, dayName ->
-            val dayRecords = filteredRecords.filter { record ->
-                val cal = Calendar.getInstance()
-                cal.time = record.startTime
-                val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
-                // Calendar.MONDAY = 2, 따라서 index 조정
-                val adjustedIndex = if (index == 6) 1 else index + 2
-                dayOfWeek == adjustedIndex
-            }
-            DailyDistance(
-                dayOfWeek = dayName,
-                distanceKm = dayRecords.sumOf { it.distanceMeters / 1000 },
+            RidingSummary(
+                totalDistanceKm = data.totalDistance,
+                totalDurationMinutes = data.totalDuration / 60, // 초를 분으로 변환
+                dailyDistances = dailyDistances,
             )
+        } else {
+            // 실패 시 빈 데이터 반환
+            RidingSummary()
         }
+    }
 
-        return RidingSummary(
-            totalDistanceKm = totalDistanceKm,
-            totalDurationMinutes = totalDurationMinutes,
-            dailyDistances = dailyDistances,
-        )
+    /**
+     * 월간 통계를 서버에서 가져오기
+     */
+    private suspend fun fetchMonthlyStatistics(): RidingSummary {
+        val calendar = Calendar.getInstance()
+        val year = calendar.get(Calendar.YEAR)
+        val result = ridingStatisticsRepository.getMonthlyStatistics(year)
+
+        return if (result.isSuccess) {
+            val data = result.getOrNull()!!
+            // 월별 데이터를 일별 형식으로 변환 (차트 표시용)
+            val dailyDistances = data.monthlyStats.take(7).map { stat ->
+                DailyDistance(
+                    dayOfWeek = stat.month.substring(5), // "2025-12" -> "12"
+                    distanceKm = stat.distance,
+                )
+            }
+            RidingSummary(
+                totalDistanceKm = data.totalDistance,
+                totalDurationMinutes = data.totalDuration / 60, // 초를 분으로 변환
+                dailyDistances = dailyDistances,
+            )
+        } else {
+            RidingSummary()
+        }
+    }
+
+    /**
+     * 연간 통계를 서버에서 가져오기
+     */
+    private suspend fun fetchYearlyStatistics(): RidingSummary {
+        val result = ridingStatisticsRepository.getYearlyStatistics()
+
+        return if (result.isSuccess) {
+            val data = result.getOrNull()!!
+            // 연도별 데이터를 일별 형식으로 변환 (차트 표시용)
+            val dailyDistances = data.yearlyStats.take(7).map { stat ->
+                DailyDistance(
+                    dayOfWeek = stat.year.toString().substring(2), // "2025" -> "25"
+                    distanceKm = stat.distance,
+                )
+            }
+            RidingSummary(
+                totalDistanceKm = data.totalDistance,
+                totalDurationMinutes = data.totalDuration / 60, // 초를 분으로 변환
+                dailyDistances = dailyDistances,
+            )
+        } else {
+            RidingSummary()
+        }
     }
 
     private fun calculateScore(records: List<RidingRecordEntity>): RidingScore {
@@ -246,11 +290,12 @@ class RidingReportViewModel(
  */
 class RidingReportViewModelFactory(
     private val localRidingRecordRepository: LocalRidingRecordRepository,
+    private val ridingStatisticsRepository: net.ritirp.myapplication.data.repository.RidingStatisticsRepository,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(RidingReportViewModel::class.java)) {
-            return RidingReportViewModel(localRidingRecordRepository) as T
+            return RidingReportViewModel(localRidingRecordRepository, ridingStatisticsRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

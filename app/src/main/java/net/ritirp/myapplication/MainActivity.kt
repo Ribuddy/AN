@@ -293,9 +293,13 @@ fun MapApp(
             }
             BottomTab.REPORT -> {
                 val localRidingRecordRepository = GlobalApplication.getLocalRidingRecordRepository(context)
+                val ridingStatisticsRepository = GlobalApplication.getRidingStatisticsRepository(context)
                 val ridingReportViewModel =
                     androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.RidingReportViewModel>(
-                        factory = net.ritirp.myapplication.presentation.viewmodel.RidingReportViewModelFactory(localRidingRecordRepository),
+                        factory = net.ritirp.myapplication.presentation.viewmodel.RidingReportViewModelFactory(
+                            localRidingRecordRepository,
+                            ridingStatisticsRepository
+                        ),
                     )
                 net.ritirp.myapplication.presentation.screen.RidingReportScreen(
                     viewModel = ridingReportViewModel,

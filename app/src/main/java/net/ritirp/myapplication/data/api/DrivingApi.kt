@@ -37,4 +37,26 @@ interface DrivingApi {
         @Path("ridingRecordId") ridingRecordId: String,
         @Body request: EndTeamRidingRequest,
     ): Response<ApiResponse<Unit>>
+
+    /**
+     * 주간 주행 통계 조회
+     */
+    @GET("v1/driving/statistics/weekly")
+    suspend fun getWeeklyStatistics(
+        @Query("startDate") startDate: String? = null,
+    ): Response<ApiResponse<WeeklyStatisticsResponse>>
+
+    /**
+     * 월간 주행 통계 조회
+     */
+    @GET("v1/driving/statistics/monthly")
+    suspend fun getMonthlyStatistics(
+        @Query("year") year: Int? = null,
+    ): Response<ApiResponse<MonthlyStatisticsResponse>>
+
+    /**
+     * 연간 주행 통계 조회
+     */
+    @GET("v1/driving/statistics/yearly")
+    suspend fun getYearlyStatistics(): Response<ApiResponse<YearlyStatisticsResponse>>
 }

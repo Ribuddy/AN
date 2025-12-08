@@ -33,7 +33,7 @@ object MapUtils {
      * VectorDrawable을 Bitmap으로 변환
      * @param context Context
      * @param drawableId Drawable 리소스 ID
-     * @param sizeDp 크기 (dp)
+     * @param sizeDp 크기 (dp) - 원본 비율을 유지하며 긴 쪽이 이 크기가 됨
      * @return Bitmap
      */
     fun vectorToBitmap(context: Context, drawableId: Int, sizeDp: Int): Bitmap? {
@@ -41,7 +41,22 @@ object MapUtils {
             val drawable = ContextCompat.getDrawable(context, drawableId) ?: return null
             val density = context.resources.displayMetrics.density
             val sizePx = (sizeDp * density).toInt()
-            drawable.toBitmap(width = sizePx, height = sizePx, config = Bitmap.Config.ARGB_8888)
+
+            // 원본 비율 계산
+            val intrinsicWidth = drawable.intrinsicWidth
+            val intrinsicHeight = drawable.intrinsicHeight
+
+            // 원본 비율을 유지하면서 긴 쪽을 sizePx로 맞춤
+            val (width, height) = if (intrinsicWidth > intrinsicHeight) {
+                val ratio = intrinsicHeight.toFloat() / intrinsicWidth.toFloat()
+                Pair(sizePx, (sizePx * ratio).toInt())
+            } else {
+                val ratio = intrinsicWidth.toFloat() / intrinsicHeight.toFloat()
+                Pair((sizePx * ratio).toInt(), sizePx)
+            }
+
+            println("DEBUG: Converting vector to bitmap - original: ${intrinsicWidth}x${intrinsicHeight}, output: ${width}x${height}")
+            drawable.toBitmap(width = width, height = height, config = Bitmap.Config.ARGB_8888)
         } catch (e: Exception) {
             println("DEBUG: Failed to convert vector to bitmap: ${e.message}")
             e.printStackTrace()
@@ -65,7 +80,7 @@ object MapUtils {
      */
     private fun getAccidentBitmap(context: Context): Bitmap? {
         if (cachedAccidentBitmap == null) {
-            cachedAccidentBitmap = vectorToBitmap(context, R.drawable.ic_accident_friend, 60)
+            cachedAccidentBitmap = vectorToBitmap(context, R.drawable.ic_accident_friend, 80)
             println("DEBUG: Accident bitmap cached")
         }
         return cachedAccidentBitmap

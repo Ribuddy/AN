@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -591,24 +592,15 @@ private fun BannerSection() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(250.dp),
+            .height(320.dp),
     ) {
         // 배경 이미지
         Image(
             painter = painterResource(id = R.drawable.background_riding_report),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
+            contentScale = ContentScale.Fit,
         )
-
-        // 메시지 말풍선 (선택적으로 표시)
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 20.dp)
-        ) {
-            // "오늘도 안전 운전 하세요!" 텍스트는 PNG 이미지에 포함되어 있으므로 제거
-        }
     }
 }
 
@@ -664,13 +656,13 @@ private fun MyRidingSection(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
-                    SummaryItem(
-                        icon = "🏍️",
+                    SummaryItemWithIcon(
+                        iconRes = R.drawable.ic_total_distance,
                         value = String.format("%.0f", summary.totalDistanceKm) + "km",
                         color = PrimaryBlue,
                     )
-                    SummaryItem(
-                        icon = "⏱️",
+                    SummaryItemWithIcon(
+                        iconRes = R.drawable.ic_total_time,
                         value = formatDuration(summary.totalDurationMinutes),
                         color = Color.Gray,
                     )
@@ -750,11 +742,44 @@ private fun SummaryItem(
 }
 
 @Composable
+private fun SummaryItemWithIcon(
+    iconRes: Int,
+    value: String,
+    color: Color,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            painter = painterResource(id = iconRes),
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(24.dp)
+        )
+        Text(
+            text = value,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = color,
+        )
+    }
+}
+
+@Composable
 private fun WeeklyBarChart(
     dailyDistances: List<net.ritirp.myapplication.data.model.DailyDistance>,
 ) {
     val maxDistance = dailyDistances.maxOfOrNull { it.distanceKm }?.coerceAtLeast(1.0) ?: 300.0
     val chartHeight = 120.dp
+
+    // 데이터 개수에 따라 바 너비 조정
+    val barWidth = when (dailyDistances.size) {
+        4 -> 50.dp  // Month (4주)
+        7 -> 32.dp  // Week (7일)
+        12 -> 24.dp // Year (12개월)
+        else -> 32.dp
+    }
 
     Column {
         // Y축 라벨과 차트
@@ -773,53 +798,108 @@ private fun WeeklyBarChart(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 바 차트
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(chartHeight),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                dailyDistances.forEach { daily ->
-                    val barHeight = if (maxDistance > 0) {
-                        (daily.distanceKm / 300.0 * chartHeight.value).coerceAtLeast(4.0)
-                    } else {
-                        4.0
+            // 바 차트 (12개월일 경우 가로 스크롤 가능)
+            if (dailyDistances.size > 7) {
+                // 가로 스크롤 가능한 차트 + 라벨 (Year 모드)
+                val scrollState = rememberScrollState()
+                Column(
+                    modifier = Modifier.horizontalScroll(scrollState)
+                ) {
+                    // 차트
+                    Row(
+                        modifier = Modifier.height(chartHeight),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.Bottom,
+                    ) {
+                        dailyDistances.forEach { daily ->
+                            val barHeight = if (maxDistance > 0) {
+                                (daily.distanceKm / 300.0 * chartHeight.value).coerceAtLeast(4.0)
+                            } else {
+                                4.0
+                            }
+
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(barWidth)
+                                        .height(barHeight.dp)
+                                        .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                        .background(ChartBlue),
+                                )
+                            }
+                        }
                     }
 
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 라벨
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .width(24.dp)
-                                .height(barHeight.dp)
-                                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                                .background(ChartBlue),
-                        )
+                        dailyDistances.forEach { daily ->
+                            Text(
+                                text = daily.label,
+                                fontSize = 11.sp,
+                                color = Color.Gray,
+                                modifier = Modifier.width(barWidth),
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                }
+            } else {
+                // 고정 너비 차트 (Week/Month 모드)
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(chartHeight),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.Bottom,
+                ) {
+                    dailyDistances.forEach { daily ->
+                        val barHeight = if (maxDistance > 0) {
+                            (daily.distanceKm / 300.0 * chartHeight.value).coerceAtLeast(4.0)
+                        } else {
+                            4.0
+                        }
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(barWidth)
+                                    .height(barHeight.dp)
+                                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                    .background(ChartBlue),
+                            )
+                        }
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        // X축 라벨 (Year 모드가 아닐 때만 표시, Year는 이미 스크롤 내부에 라벨 포함)
+        if (dailyDistances.size <= 7) {
+            Spacer(modifier = Modifier.height(8.dp))
 
-        // X축 라벨
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 32.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            dailyDistances.forEach { daily ->
-                Text(
-                    text = daily.dayOfWeek,
-                    fontSize = 11.sp,
-                    color = Color.Gray,
-                    modifier = Modifier.width(24.dp),
-                    textAlign = TextAlign.Center,
-                )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 32.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                dailyDistances.forEach { daily ->
+                    Text(
+                        text = daily.label,
+                        fontSize = 11.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.width(barWidth),
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
     }

@@ -14,10 +14,10 @@ data class RidingSummary(
 )
 
 /**
- * 일별 주행 거리
+ * 일별/주별 주행 거리
  */
 data class DailyDistance(
-    val dayOfWeek: String, // Mo, Tu, We, Th, Fr, Sa, Su
+    val label: String, // Week: Mo, Tu, We... / Month: W1, W2, W3, W4 / Year: Jan, Feb...
     val distanceKm: Double,
 )
 

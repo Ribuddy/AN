@@ -186,7 +186,7 @@ class RidingReportViewModel(
             val data = result.getOrNull()!!
             val dailyDistances = data.dailyStats.map { stat ->
                 DailyDistance(
-                    dayOfWeek = stat.dayOfWeek,
+                    label = stat.dayOfWeek,
                     distanceKm = stat.distance,
                 )
             }
@@ -203,6 +203,7 @@ class RidingReportViewModel(
 
     /**
      * 월간 통계를 서버에서 가져오기
+     * 4주(Week 1~4)로 표시
      */
     private suspend fun fetchMonthlyStatistics(): RidingSummary {
         val calendar = Calendar.getInstance()
@@ -211,92 +212,81 @@ class RidingReportViewModel(
 
         return if (result.isSuccess) {
             val data = result.getOrNull()!!
-            // 월별 데이터를 일별 형식으로 변환 (차트 표시용)
-            val dailyDistances = data.monthlyStats.take(7).map { stat ->
-                DailyDistance(
-                    dayOfWeek = stat.month.substring(5), // "2025-12" -> "12"
-                    distanceKm = stat.distance,
-                )
+            val currentMonth = calendar.get(Calendar.MONTH) + 1
+
+            // 현재 월의 데이터 찾기
+            val currentMonthData = data.monthlyStats.find {
+                it.month == String.format("%04d-%02d", year, currentMonth)
             }
+
+            // 월간 거리를 4주로 나누어 표시 (실제로는 서버에서 주별 데이터를 받아야 하지만, 임시로 균등 분할)
+            val totalDistance = currentMonthData?.distance ?: 0.0
+            val weeklyDistance = totalDistance / 4.0
+
+            val dailyDistances = listOf(
+                DailyDistance(label = "W1", distanceKm = weeklyDistance),
+                DailyDistance(label = "W2", distanceKm = weeklyDistance),
+                DailyDistance(label = "W3", distanceKm = weeklyDistance),
+                DailyDistance(label = "W4", distanceKm = weeklyDistance),
+            )
+
             RidingSummary(
                 totalDistanceKm = data.totalDistance,
                 totalDurationMinutes = data.totalDuration / 60, // 초를 분으로 변환
                 dailyDistances = dailyDistances,
             )
         } else {
-            RidingSummary()
+            // 실패 시 빈 4주 데이터 반환
+            RidingSummary(
+                totalDistanceKm = 0.0,
+                totalDurationMinutes = 0,
+                dailyDistances = listOf(
+                    DailyDistance(label = "W1", distanceKm = 0.0),
+                    DailyDistance(label = "W2", distanceKm = 0.0),
+                    DailyDistance(label = "W3", distanceKm = 0.0),
+                    DailyDistance(label = "W4", distanceKm = 0.0),
+                ),
+            )
         }
     }
 
     /**
      * 연간 통계를 서버에서 가져오기
+     * 12개월(Jan~Dec)로 표시
      */
     private suspend fun fetchYearlyStatistics(): RidingSummary {
-        val result = ridingStatisticsRepository.getYearlyStatistics()
+        val calendar = Calendar.getInstance()
+        val year = calendar.get(Calendar.YEAR)
+        val result = ridingStatisticsRepository.getMonthlyStatistics(year)
 
         return if (result.isSuccess) {
             val data = result.getOrNull()!!
 
-            // 연도별 데이터가 없으면 빈 차트 데이터 반환 (7개의 0 데이터)
-            if (data.yearlyStats.isEmpty()) {
-                val emptyDailyDistances = List(7) { index ->
-                    DailyDistance(
-                        dayOfWeek = (index + 1).toString(),
-                        distanceKm = 0.0,
-                    )
-                }
-                return RidingSummary(
-                    totalDistanceKm = 0.0,
-                    totalDurationMinutes = 0,
-                    dailyDistances = emptyDailyDistances,
-                )
-            }
+            // 월 이름 배열
+            val monthNames = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
-            // 최근 7개 연도 데이터 준비
-            val sortedYears = data.yearlyStats.sortedByDescending { it.year }
-            val recentYears = sortedYears.take(7).reversed() // 오래된 순서로
-
-            // 데이터가 7개 미만이면 앞쪽을 0으로 채우기
-            val dailyDistances = mutableListOf<DailyDistance>()
-
-            // 부족한 개수만큼 0 데이터 추가
-            val paddingCount = (7 - recentYears.size).coerceAtLeast(0)
-            repeat(paddingCount) { index ->
-                dailyDistances.add(
-                    DailyDistance(
-                        dayOfWeek = "-",
-                        distanceKm = 0.0,
-                    )
-                )
-            }
-
-            // 실제 데이터 추가
-            recentYears.forEach { stat ->
-                dailyDistances.add(
-                    DailyDistance(
-                        dayOfWeek = stat.year.toString().takeLast(2), // "2025" -> "25"
-                        distanceKm = stat.distance,
-                    )
+            // 12개월 데이터 생성
+            val dailyDistances = (1..12).map { month ->
+                val monthStr = String.format("%04d-%02d", year, month)
+                val monthData = data.monthlyStats.find { it.month == monthStr }
+                DailyDistance(
+                    label = monthNames[month - 1],
+                    distanceKm = monthData?.distance ?: 0.0
                 )
             }
 
             RidingSummary(
                 totalDistanceKm = data.totalDistance,
-                totalDurationMinutes = data.totalDuration / 60, // 초를 분으로 변환
+                totalDurationMinutes = data.totalDuration / 60,
                 dailyDistances = dailyDistances,
             )
         } else {
-            // 실패 시에도 7개의 빈 데이터 반환
-            val emptyDailyDistances = List(7) { index ->
-                DailyDistance(
-                    dayOfWeek = (index + 1).toString(),
-                    distanceKm = 0.0,
-                )
-            }
+            // 실패 시 빈 12개월 데이터 반환
+            val monthNames = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
             RidingSummary(
                 totalDistanceKm = 0.0,
                 totalDurationMinutes = 0,
-                dailyDistances = emptyDailyDistances,
+                dailyDistances = monthNames.map { DailyDistance(label = it, distanceKm = 0.0) },
             )
         }
     }

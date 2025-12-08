@@ -423,6 +423,9 @@ private fun MapScreenContent(
 ) {
     // 경로 입력 다이얼로그 상태
     var showRouteDialog by remember { mutableStateOf(false) }
+    // 선택된 출발지와 도착지 위치 저장
+    var selectedDeparture by remember { mutableStateOf<LocationData?>(null) }
+    var selectedDestination by remember { mutableStateOf<LocationData?>(null) }
 
     Box(modifier = modifier.fillMaxSize()) {
         if (isPreview) {
@@ -531,11 +534,29 @@ private fun MapScreenContent(
             currentLocationName = "내 현재 위치",
             onDismiss = {
                 showRouteDialog = false
+                selectedDeparture = null
+                selectedDestination = null
                 viewModel?.clearSearchResults()
             },
             onConfirm = { departure: String, destination: String ->
                 Log.d("MainActivity", "경로 설정: 출발지=$departure, 도착지=$destination")
+
+                // 출발지가 "내 현재 위치"인 경우 현재 위치 사용, 아니면 선택된 출발지 사용
+                val departureLocation = if (departure == "내 현재 위치" || selectedDeparture == null) {
+                    uiState.currentLocation
+                } else {
+                    selectedDeparture!!
+                }
+
+                // 도착지는 선택된 위치 사용
+                selectedDestination?.let { dest ->
+                    Log.d("MainActivity", "경로 검색 시작: 출발지=(${departureLocation.latitude}, ${departureLocation.longitude}), 도착지=(${dest.latitude}, ${dest.longitude})")
+                    viewModel?.setRoute(departureLocation, dest)
+                }
+
                 showRouteDialog = false
+                selectedDeparture = null
+                selectedDestination = null
                 viewModel?.clearSearchResults()
             },
             searchResults = uiState.searchResults,
@@ -547,13 +568,15 @@ private fun MapScreenContent(
                 val lon = poi.getLongitude()
                 if (lat != null && lon != null) {
                     val location = LocationData(lat, lon)
-                    if (!isDeparture) {
-                        // 도착지인 경우 경로 설정
-                        viewModel?.onMapClicked(location)
-                        showRouteDialog = false
-                        viewModel?.clearSearchResults()
+                    if (isDeparture) {
+                        // 출발지 선택
+                        selectedDeparture = location
+                        Log.d("MainActivity", "출발지 선택됨: ${poi.name} (${lat}, ${lon})")
+                    } else {
+                        // 도착지 선택
+                        selectedDestination = location
+                        Log.d("MainActivity", "도착지 선택됨: ${poi.name} (${lat}, ${lon})")
                     }
-                    // 출발지인 경우는 다이얼로그를 닫지 않고 계속 열어둠
                 }
             },
             isSearching = uiState.isSearching,

@@ -21,6 +21,7 @@ import net.ritirp.myapplication.service.RidingMetricsTracker
 data class MapUiState(
     val currentLocation: LocationData = LocationData.DEFAULT_SEOUL,
     val destination: LocationData? = null,
+    val departure: LocationData? = null, // 출발지 추가
     val route: RouteData? = null,
     val routePoints: List<com.kakao.vectormap.LatLng> = emptyList(), // 서버에서 받은 경로 좌표들
     val markers: List<MarkerData> = emptyList(),
@@ -199,6 +200,34 @@ class MapViewModel(
      */
     fun clearSearchResults() {
         _uiState.value = _uiState.value.copy(searchResults = emptyList())
+    }
+
+    /**
+     * 출발지와 도착지를 설정하고 경로를 검색
+     */
+    fun setRoute(departure: LocationData, destination: LocationData) {
+        println("DEBUG: ViewModel setRoute - departure: ${departure.latitude}, ${departure.longitude}, destination: ${destination.latitude}, ${destination.longitude}")
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                departure = departure,
+                destination = destination
+            )
+            try {
+                val routePoints = mapRepository.getRoute(departure, destination)
+                _uiState.value = _uiState.value.copy(routePoints = routePoints)
+                println("DEBUG: Updated routePoints in UI state: ${routePoints.size} points")
+
+                // 목적지를 Repository에도 설정
+                mapRepository.setDestination(destination)
+            } catch (e: Exception) {
+                println("DEBUG: Error getting route: ${e.message}")
+                e.printStackTrace()
+            } finally {
+                _uiState.value = _uiState.value.copy(isLoading = false)
+            }
+        }
     }
 }
 

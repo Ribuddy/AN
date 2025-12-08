@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import net.ritirp.myapplication.data.api.Poi
 import net.ritirp.myapplication.data.model.LocationData
 import net.ritirp.myapplication.data.model.MarkerData
 import net.ritirp.myapplication.data.model.RidingMetrics
@@ -27,6 +28,8 @@ data class MapUiState(
     val isLocationPermissionGranted: Boolean = false,
     val currentTab: BottomTab = BottomTab.MAP,
     val isLoading: Boolean = false,
+    val searchResults: List<Poi> = emptyList(),
+    val isSearching: Boolean = false,
 )
 
 enum class BottomTab(
@@ -160,6 +163,42 @@ class MapViewModel(
      */
     fun calibrateLeanAngle() {
         ridingMetricsTracker?.calibrateLeanAngle()
+    }
+
+    /**
+     * 장소 검색
+     */
+    fun searchPlace(keyword: String) {
+        if (keyword.isBlank()) {
+            _uiState.value = _uiState.value.copy(searchResults = emptyList())
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSearching = true)
+            try {
+                val currentLocation = _uiState.value.currentLocation
+                val results = mapRepository.searchPlace(
+                    keyword = keyword,
+                    centerLat = currentLocation.latitude,
+                    centerLon = currentLocation.longitude
+                )
+                _uiState.value = _uiState.value.copy(searchResults = results)
+            } catch (e: Exception) {
+                println("DEBUG: Error searching place: ${e.message}")
+                e.printStackTrace()
+                _uiState.value = _uiState.value.copy(searchResults = emptyList())
+            } finally {
+                _uiState.value = _uiState.value.copy(isSearching = false)
+            }
+        }
+    }
+
+    /**
+     * 검색 결과 초기화
+     */
+    fun clearSearchResults() {
+        _uiState.value = _uiState.value.copy(searchResults = emptyList())
     }
 }
 

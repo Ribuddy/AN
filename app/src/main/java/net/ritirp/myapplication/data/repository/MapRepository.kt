@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import net.ritirp.myapplication.data.api.MapApi
+import net.ritirp.myapplication.data.api.Poi
+import net.ritirp.myapplication.data.api.PoiSearchRequest
 import net.ritirp.myapplication.data.model.LocationData
 import net.ritirp.myapplication.data.model.MarkerData
 import net.ritirp.myapplication.data.model.MarkerType
@@ -222,6 +224,56 @@ class MapRepository(
         _markers.value = teamMarkers
     }
 
+
+    /**
+     * 장소 검색
+     * @param keyword 검색 키워드
+     * @param centerLat 중심 위도 (반경 검색용)
+     * @param centerLon 중심 경도 (반경 검색용)
+     * @return 검색된 장소 목록
+     */
+    suspend fun searchPlace(
+        keyword: String,
+        centerLat: Double? = null,
+        centerLon: Double? = null,
+    ): List<Poi> {
+        return try {
+            println("DEBUG: Searching place with keyword: $keyword, center: ($centerLat, $centerLon)")
+
+            val request = PoiSearchRequest(
+                searchKeyword = keyword,
+                centerLat = centerLat,
+                centerLon = centerLon,
+            )
+
+            val response = mapApi.searchPoi(request)
+
+            if (response.isSuccessful && response.body() != null) {
+                val searchResponse = response.body()!!
+                println("DEBUG: Response isSuccess: ${searchResponse.isSuccess}")
+                println("DEBUG: Response code: ${searchResponse.code}")
+
+                // result.searchPoiInfo.pois.poi 경로로 데이터 접근
+                val pois = searchResponse.result?.searchPoiInfo?.pois?.poi ?: emptyList()
+                println("DEBUG: Found ${pois.size} places")
+
+                // 디버깅: 첫 번째 결과 출력
+                if (pois.isNotEmpty()) {
+                    val first = pois.first()
+                    println("DEBUG: First place: ${first.name} at (${first.frontLat}, ${first.frontLon})")
+                }
+
+                pois
+            } else {
+                println("DEBUG: Search request failed: ${response.code()} - ${response.message()}")
+                emptyList()
+            }
+        } catch (e: Exception) {
+            println("DEBUG: Exception searching place: ${e.message}")
+            e.printStackTrace()
+            emptyList()
+        }
+    }
     private fun isEmulatorLocation(location: LocationData): Boolean =
         location.latitude in 37.0..38.0 && location.longitude in -123.0..-121.0
 }

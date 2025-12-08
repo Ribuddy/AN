@@ -1,6 +1,5 @@
 package net.ritirp.myapplication.presentation.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,7 +11,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -28,8 +26,8 @@ import net.ritirp.myapplication.presentation.viewmodel.BottomTab
  */
 @Composable
 fun TopSearchBar(
-    onFriendClick: () -> Unit = {},
     onSearchBarClick: () -> Unit = {},
+    onFriendClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -178,10 +176,16 @@ fun RouteInputDialog(
     currentLocationName: String = "내 현재 위치",
     onDismiss: () -> Unit,
     onConfirm: (departure: String, destination: String) -> Unit,
+    searchResults: List<net.ritirp.myapplication.data.api.Poi> = emptyList(),
+    onSearch: (String) -> Unit = {},
+    onSelectSearchResult: (net.ritirp.myapplication.data.api.Poi, Boolean) -> Unit = { _, _ -> },
+    isSearching: Boolean = false,
 ) {
     var departureText by remember { mutableStateOf(currentLocationName) }
     var destinationText by remember { mutableStateOf("") }
     var useCurrentLocation by remember { mutableStateOf(true) }
+    var isDepartureSearchMode by remember { mutableStateOf(false) }
+    var isDestinationSearchMode by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -269,12 +273,30 @@ fun RouteInputDialog(
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
                                 value = departureText,
-                                onValueChange = { departureText = it },
+                                onValueChange = {
+                                    departureText = it
+                                    if (it.isNotBlank()) {
+                                        isDepartureSearchMode = true
+                                        isDestinationSearchMode = false
+                                        onSearch(it)
+                                    } else {
+                                        isDepartureSearchMode = false
+                                    }
+                                },
                                 placeholder = {
                                     Text(
                                         "출발지를 입력하세요",
                                         color = Color(0xFFAAAAAA),
                                     )
+                                },
+                                trailingIcon = {
+                                    if (isSearching && isDepartureSearchMode) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            strokeWidth = 2.dp,
+                                            color = Color(0xFF4285F4),
+                                        )
+                                    }
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
@@ -286,6 +308,66 @@ fun RouteInputDialog(
                                     unfocusedContainerColor = Color.White,
                                 ),
                             )
+
+                            // 출발지 검색 결과 목록
+                            if (isDepartureSearchMode && searchResults.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = 200.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color.White,
+                                    ),
+                                    shape = RoundedCornerShape(8.dp),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(4.dp),
+                                    ) {
+                                        searchResults.take(5).forEach { poi ->
+                                            Surface(
+                                                onClick = {
+                                                    departureText = poi.name ?: ""
+                                                    isDepartureSearchMode = false
+                                                    onSelectSearchResult(poi, true)
+                                                },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                color = Color.Transparent,
+                                            ) {
+                                                Column(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(12.dp),
+                                                ) {
+                                                    Text(
+                                                        text = poi.name ?: "",
+                                                        fontSize = 15.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        color = Color(0xFF333333),
+                                                    )
+                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                    Text(
+                                                        text = poi.getFullAddress(),
+                                                        fontSize = 13.sp,
+                                                        color = Color(0xFF888888),
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                    )
+                                                }
+                                            }
+                                            if (poi != searchResults.take(5).last()) {
+                                                HorizontalDivider(
+                                                    thickness = 1.dp,
+                                                    color = Color(0xFFEEEEEE),
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -322,12 +404,30 @@ fun RouteInputDialog(
 
                         OutlinedTextField(
                             value = destinationText,
-                            onValueChange = { destinationText = it },
+                            onValueChange = {
+                                destinationText = it
+                                if (it.isNotBlank()) {
+                                    isDestinationSearchMode = true
+                                    isDepartureSearchMode = false
+                                    onSearch(it)
+                                } else {
+                                    isDestinationSearchMode = false
+                                }
+                            },
                             placeholder = {
                                 Text(
                                     "도착지를 입력하세요",
                                     color = Color(0xFFAAAAAA),
                                 )
+                            },
+                            trailingIcon = {
+                                if (isSearching && isDestinationSearchMode) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp,
+                                        color = Color(0xFF4285F4),
+                                    )
+                                }
                             },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
@@ -339,6 +439,66 @@ fun RouteInputDialog(
                                 unfocusedContainerColor = Color.White,
                             ),
                         )
+
+                        // 도착지 검색 결과 목록
+                        if (isDestinationSearchMode && searchResults.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 200.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color.White,
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(4.dp),
+                                ) {
+                                    searchResults.take(5).forEach { poi ->
+                                        Surface(
+                                            onClick = {
+                                                destinationText = poi.name ?: ""
+                                                isDestinationSearchMode = false
+                                                onSelectSearchResult(poi, false)
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            color = Color.Transparent,
+                                        ) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(12.dp),
+                                            ) {
+                                                Text(
+                                                    text = poi.name ?: "",
+                                                    fontSize = 15.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = Color(0xFF333333),
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = poi.getFullAddress(),
+                                                    fontSize = 13.sp,
+                                                    color = Color(0xFF888888),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                )
+                                            }
+                                        }
+                                        if (poi != searchResults.take(5).last()) {
+                                            HorizontalDivider(
+                                                thickness = 1.dp,
+                                                color = Color(0xFFEEEEEE),
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 

@@ -547,13 +547,34 @@ private fun MapScreenContent(
     if (showRouteDialog) {
         RouteInputDialog(
             currentLocationName = "내 현재 위치",
-            onDismiss = { showRouteDialog = false },
-            onConfirm = { departure, destination ->
-                android.util.Log.d("MainActivity", "경로 설정: 출발지=$departure, 도착지=$destination")
+            onDismiss = {
                 showRouteDialog = false
-                // TODO: 도착지 주소로 좌표 변환 후 길찾기 실행
-                // viewModel?.searchAndSetDestination(destination)
+                viewModel?.clearSearchResults()
             },
+            onConfirm = { departure: String, destination: String ->
+                Log.d("MainActivity", "경로 설정: 출발지=$departure, 도착지=$destination")
+                showRouteDialog = false
+                viewModel?.clearSearchResults()
+            },
+            searchResults = uiState.searchResults,
+            onSearch = { keyword: String ->
+                viewModel?.searchPlace(keyword)
+            },
+            onSelectSearchResult = { poi: net.ritirp.myapplication.data.api.Poi, isDeparture: Boolean ->
+                val lat = poi.getLatitude()
+                val lon = poi.getLongitude()
+                if (lat != null && lon != null) {
+                    val location = LocationData(lat, lon)
+                    if (!isDeparture) {
+                        // 도착지인 경우 경로 설정
+                        viewModel?.onMapClicked(location)
+                        showRouteDialog = false
+                        viewModel?.clearSearchResults()
+                    }
+                    // 출발지인 경우는 다이얼로그를 닫지 않고 계속 열어둠
+                }
+            },
+            isSearching = uiState.isSearching,
         )
     }
 }

@@ -269,26 +269,25 @@ class TeamViewModel(
     }
 
     /**
-     * 팀 참여 코드 조회
+     * 팀 참여 코드 가져오기
      */
     fun getTeamJoinCode(teamId: String) {
+        android.util.Log.d("TeamViewModel", "getTeamJoinCode 호출: teamId=$teamId")
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(teamJoinCode = null) // 이전 코드 초기화
 
             teamRepository.getTeamJoinCode(teamId)
                 .onSuccess { joinCode ->
-                    android.util.Log.d("TeamViewModel", "참여 코드 받음: $joinCode")
-                    _uiState.value =
-                        _uiState.value.copy(
-                            teamJoinCode = joinCode,
-                        )
+                    android.util.Log.d("TeamViewModel", "팀 참여 코드 조회 성공: $joinCode")
+                    _uiState.value = _uiState.value.copy(
+                        teamJoinCode = joinCode
+                    )
                 }
                 .onFailure { error ->
-                    android.util.Log.e("TeamViewModel", "참여 코드 조회 실패: ${error.message}")
-                    _uiState.value =
-                        _uiState.value.copy(
-                            error = error.message ?: "참여 코드 조회에 실패했습니다.",
-                        )
+                    android.util.Log.e("TeamViewModel", "팀 참여 코드 조회 실패: ${error.message}")
+                    _uiState.value = _uiState.value.copy(
+                        error = error.message ?: "팀 참여 코드 조회에 실패했습니다."
+                    )
                 }
         }
     }

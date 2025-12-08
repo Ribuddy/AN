@@ -725,6 +725,91 @@ fun TeamDetailScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // 팀 참여 코드 카드
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFE3F2FD),
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "팀 참여 코드",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black,
+                        )
+
+                        if (joinCode == null) {
+                            Button(
+                                onClick = onGetJoinCode,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF4285F4)
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "코드 보기",
+                                    fontSize = 12.sp,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+
+                    if (joinCode != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = joinCode,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1976D2),
+                            )
+
+                            IconButton(
+                                onClick = {
+                                    clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(joinCode))
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = "복사",
+                                    tint = Color(0xFF1976D2)
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "친구에게 이 코드를 공유하세요",
+                            fontSize = 12.sp,
+                            color = Color.Gray,
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // 팀 설명 카드
             Card(
                 modifier = Modifier.fillMaxWidth(),

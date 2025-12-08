@@ -604,23 +604,24 @@ private fun RidingRecordDetailSection(record: RidingRecordEntity) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 두 번째 행: 최고 속도, 상승/하강
+                // 두 번째 행: 최고 속도
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    DetailStatColumnWithIcon(
-                        icon = "🏃",
+                    DetailStatColumn(
                         value = String.format("%.1fkm/h", record.maxSpeedKmh),
                         label = "Top speed",
                     )
-                    DetailStatColumnWithIcon(
-                        icon = "⬆️",
+
+                    // Climb/Fall (상승/하강)
+                    DetailStatColumnWithDrawableIcon(
+                        iconResId = R.drawable.ic_up,
                         value = String.format("%.0fm", record.totalClimbMeters),
                         label = "Climb/Fall",
                     )
-                    DetailStatColumnWithIcon(
-                        icon = "⬇️",
+                    DetailStatColumnWithDrawableIcon(
+                        iconResId = R.drawable.ic_down,
                         value = String.format("%.0fm", record.totalFallMeters),
                         label = "",
                     )
@@ -633,19 +634,20 @@ private fun RidingRecordDetailSection(record: RidingRecordEntity) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    DetailStatColumnWithIcon(
-                        icon = "🕐",
+                    DetailStatColumn(
                         value = formatTimeDetail(record.startTime.time),
                         label = "Start",
                     )
-                    DetailStatColumnWithIcon(
-                        icon = "↩️",
+
+                    // Lean Angle (기울기)
+                    DetailStatColumnWithDrawableIcon(
+                        iconResId = R.drawable.ic_left2right,
                         value = String.format("%.0f°", record.maxLeanAngleDegrees),
                         label = "Lean Angle (°)",
                     )
-                    DetailStatColumnWithIcon(
-                        icon = "↪️",
-                        value = String.format("%.0f", record.maxLeanAngleDegrees),
+                    DetailStatColumnWithDrawableIcon(
+                        iconResId = R.drawable.ic_right2left,
+                        value = String.format("%.0f°", record.maxLeanAngleDegrees),
                         label = "",
                     )
                 }
@@ -681,11 +683,11 @@ private fun DetailStatColumn(
 }
 
 /**
- * 상세 통계 열 (아이콘 + 값 + 라벨)
+ * 상세 통계 열 (Drawable 아이콘 + 값 + 라벨)
  */
 @Composable
-private fun DetailStatColumnWithIcon(
-    icon: String,
+private fun DetailStatColumnWithDrawableIcon(
+    iconResId: Int,
     value: String,
     label: String,
 ) {
@@ -696,7 +698,12 @@ private fun DetailStatColumnWithIcon(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text(text = icon, fontSize = 16.sp)
+            Icon(
+                painter = painterResource(id = iconResId),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = Color(0xFF6B7280),
+            )
             Text(
                 text = value,
                 fontSize = 16.sp,
@@ -1129,15 +1136,7 @@ private fun RidingScoreSection(
                 modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // 점수 필터 탭
-                ScoreFilterTabs(
-                    selectedFilter = selectedFilter,
-                    onFilterSelected = onFilterSelected,
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // 원형 점수 게이지
+                // 원형 점수 게이지 (필터 탭 제거)
                 CircularScoreGauge(
                     score = score.totalScore,
                 )

@@ -47,20 +47,26 @@ class MyViewModel(
      */
     private fun loadUserProfile() {
         viewModelScope.launch {
-            Log.d("MyViewModel", "프로필 로드 시작")
+            Log.d("MyViewModel", "========== 프로필 로드 시작 ==========")
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            Log.d("MyViewModel", "로딩 상태 설정: ${_uiState.value.isLoading}")
 
             userRepository.getMyProfile()
                 .onSuccess { profile ->
-                    Log.d("MyViewModel", "프로필 로드 성공: ${profile.name}, @${profile.ribuddyId}")
+                    Log.d("MyViewModel", "✅ 프로필 로드 성공: ${profile.name}, @${profile.ribuddyId}")
 
                     // 친구 수, 팀 수, 주행 기록 수 가져오기
-                    val friendCount = userRepository.getFriendCount().getOrNull() ?: 0
-                    val teamCount = userRepository.getTeamCount().getOrNull() ?: 0
-                    val ridingRecordCount = userRepository.getRidingRecordCount().getOrNull() ?: 0
+                    Log.d("MyViewModel", "📊 통계 데이터 로드 시작...")
 
-                    Log.d("MyViewModel", "통계 로드: 친구=$friendCount, 팀=$teamCount, 주행기록=$ridingRecordCount")
+                    val friendCount = userRepository.getFriendCount().getOrNull() ?: 0
+                    Log.d("MyViewModel", "   - 친구 수: $friendCount")
+
+                    val teamCount = userRepository.getTeamCount().getOrNull() ?: 0
+                    Log.d("MyViewModel", "   - 팀 수: $teamCount")
+
+                    val ridingRecordCount = userRepository.getRidingRecordCount().getOrNull() ?: 0
+                    Log.d("MyViewModel", "   - 주행기록 수: $ridingRecordCount")
+
+                    Log.d("MyViewModel", "📊 통계 로드 완료: 친구=$friendCount, 팀=$teamCount, 주행기록=$ridingRecordCount")
 
                     _uiState.value =
                         _uiState.value.copy(
@@ -70,13 +76,10 @@ class MyViewModel(
                             ridingRecordCount = ridingRecordCount,
                             isLoading = false,
                         )
-                    Log.d(
-                        "MyViewModel",
-                        "UI 상태 업데이트: name=${_uiState.value.userProfile?.name}, id=${_uiState.value.userProfile?.ribuddyId}",
-                    )
+                    Log.d("MyViewModel", "========== 프로필 로드 완료 ==========")
                 }
                 .onFailure { exception ->
-                    Log.e("MyViewModel", "프로필 로드 실패: ${exception.message}", exception)
+                    Log.e("MyViewModel", "❌ 프로필 로드 실패: ${exception.message}", exception)
                     _uiState.value =
                         _uiState.value.copy(
                             isLoading = false,
@@ -87,9 +90,10 @@ class MyViewModel(
     }
 
     /**
-     * 프로필 새로고침
+     * 프로필 새로고침 (외부에서 호출 가능)
      */
     fun refreshProfile() {
+        Log.d("MyViewModel", "🔄 refreshProfile() 호출됨 - 프로필 새로고침 시작")
         loadUserProfile()
     }
 

@@ -19,6 +19,30 @@ data class LocationUpdateRequest(
     @SerializedName("lat") val lat: Double,
     @SerializedName("lon") val lon: Double,
     @SerializedName("ele") val ele: Double? = null,
+    @SerializedName("gravityForce") val gravityForce: Double? = null, // 중력 가속도 (G 단위)
+    @SerializedName("leanAngle") val leanAngle: Double? = null, // 기울기 각도 (도 단위)
+)
+
+// 사고 발생 보고 요청
+data class AccidentReportRequest(
+    @SerializedName("lat") val lat: Double,
+    @SerializedName("lon") val lon: Double,
+    @SerializedName("ele") val ele: Double? = null,
+    @SerializedName("gravityForce") val gravityForce: Double? = null, // 중력 가속도 (G 단위)
+    @SerializedName("leanAngle") val leanAngle: Double? = null, // 기울기 각도 (도 단위)
+    @SerializedName("ridingRecordId") val ridingRecordId: String,
+    @SerializedName("timestamp") val timestamp: String? = null,
+)
+
+// 급가속/급정거 보고 요청
+data class SuddenSpeedChangeReportRequest(
+    @SerializedName("lat") val lat: Double,
+    @SerializedName("lon") val lon: Double,
+    @SerializedName("ele") val ele: Double? = null,
+    @SerializedName("gravityForce") val gravityForce: Double? = null, // 중력 가속도 (G 단위)
+    @SerializedName("leanAngle") val leanAngle: Double? = null, // 기울기 각도 (도 단위)
+    @SerializedName("ridingRecordId") val ridingRecordId: String,
+    @SerializedName("timestamp") val timestamp: String? = null,
 )
 
 // 팀 라이딩 종료 요청
@@ -53,3 +77,31 @@ enum class RidingStatus {
     PAUSED, // 일시 정지
     ENDED, // 종료됨
 }
+
+// 위치 업데이트 응답 (팀 위치, 사고 정보, 경로 등 포함)
+data class LocationUpdateResponse(
+    @SerializedName("teammateLocations") val teamMemberLocations: List<TeamMemberLocation>? = null,
+    @SerializedName("ridingEvents") val ridingEvents: List<AccidentInfo>? = null,
+    @SerializedName("route") val route: RouteInfo? = null,
+)
+
+// 사고 정보
+data class AccidentInfo(
+    @SerializedName("userId") val userId: String,
+    @SerializedName("userName") val userName: String? = null,
+    @SerializedName("lat") val lat: Double,
+    @SerializedName("lon") val lon: Double,
+    @SerializedName("timestamp") val timestamp: String? = null,
+)
+
+// 경로 정보
+data class RouteInfo(
+    @SerializedName("teamId") val teamId: String? = null,
+    @SerializedName("path") val path: List<PathPoint>? = null,
+)
+
+// 경로 포인트
+data class PathPoint(
+    @SerializedName("lat") val lat: Double,
+    @SerializedName("lon") val lon: Double,
+)

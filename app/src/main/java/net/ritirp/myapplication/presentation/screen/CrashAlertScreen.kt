@@ -28,6 +28,7 @@ import net.ritirp.myapplication.data.model.CrashEvent
  * - 30초 카운트다운
  * - 취소 또는 확인 버튼
  * - 애니메이션 + 진동 효과
+ * - 서버에 사고 자동 보고
  */
 @Composable
 fun CrashAlertScreen(
@@ -35,6 +36,7 @@ fun CrashAlertScreen(
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
+    onReportAccident: ((CrashEvent) -> Unit)? = null, // 사고 보고 콜백
 ) {
     val context = LocalContext.current
     var countdown by remember { mutableIntStateOf(30) }
@@ -43,6 +45,11 @@ fun CrashAlertScreen(
     // 진동 효과 (앱 시작 시 한 번만)
     LaunchedEffect(Unit) {
         triggerVibration(context)
+    }
+
+    // 서버에 사고 보고 (화면 표시 시 한 번만)
+    LaunchedEffect(Unit) {
+        onReportAccident?.invoke(crashEvent)
     }
 
     // 카운트다운 타이머

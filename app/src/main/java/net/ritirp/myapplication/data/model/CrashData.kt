@@ -7,9 +7,13 @@ package net.ritirp.myapplication.data.model
 // 사고 이벤트
 data class CrashEvent(
     val timestamp: Long = System.currentTimeMillis(),
-    val impactMagnitude: Float,
-    val rotationMagnitude: Float,
-    val detectionReason: String,
+    val impactMagnitude: Float, // 충격 강도 (G 단위)
+    val rotationMagnitude: Float, // 회전 강도 (rad/s)
+    val detectionReason: String, // 감지 이유
+    val lat: Double? = null, // 위도
+    val lon: Double? = null, // 경도
+    val ele: Double? = null, // 고도
+    val leanAngle: Double? = null, // 기울기 각도 (도 단위)
 )
 
 // 감지 민감도
@@ -51,6 +55,8 @@ data class RidingMetrics(
     var totalFall: Double = 0.0, // 하강 고도 (미터)
     var currentSpeed: Float = 0.0f, // 현재 속도 (m/s)
     var currentLeanAngle: Float = 0.0f, // 현재 기울기 (도)
+    val isRiding: Boolean = false, // 주행 중 여부
+    val lastUpdateTime: Long = System.currentTimeMillis(), // UI 갱신용 타임스탬프
 ) {
     val duration: Long
         get() = (endTime ?: System.currentTimeMillis()) - startTime
@@ -84,4 +90,5 @@ data class LocationRecord(
     val longitude: Double,
     val altitude: Double?,
     val speed: Float?, // GPS 속도 (m/s)
+    val leanAngle: Float? = null, // 해당 지점의 기울기 각도
 )

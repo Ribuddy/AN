@@ -24,6 +24,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -93,8 +95,21 @@ fun AppNavigation(
 
     LaunchedEffect(Unit) {
         val crashDetector = GlobalApplication.getCrashDetector(context)
+
+        // CrashDetector에 위치 제공자 설정
+        crashDetector.setLocationProvider {
+            // MapViewModel의 현재 위치 사용
+            val currentLocation = mapViewModel.uiState.value.currentLocation
+            Triple(
+                currentLocation.latitude,
+                currentLocation.longitude,
+                null // 고도 정보는 현재 없음
+            )
+        }
+
         crashDetector.crashEvents.collect { event ->
             Log.e("AppNavigation", "🚨 Crash event received, navigating to crash screen")
+            Log.d("AppNavigation", "사고 위치: lat=${event.lat}, lon=${event.lon}, ele=${event.ele}, angle=${event.leanAngle}")
             currentCrashEvent = event
             navController.navigate("crash") {
                 // 백스택에 추가하되, 중복 방지
@@ -165,6 +180,9 @@ fun AppNavigation(
         // 사고 감지 경고 화면
         composable("crash") {
             currentCrashEvent?.let { event ->
+                val drivingRepository = GlobalApplication.getDrivingRepository(context)
+                val coroutineScope = rememberCoroutineScope()
+
                 CrashAlertScreen(
                     crashEvent = event,
                     onConfirm = {
@@ -175,6 +193,39 @@ fun AppNavigation(
                     onCancel = {
                         Log.d("AppNavigation", "User is OK, dismissing alert")
                         navController.popBackStack()
+                    },
+                    onReportAccident = { crashEvent ->
+                        // 서버에 사고 보고
+                        coroutineScope.launch {
+                            val ridingRecordId = drivingRepository.currentRidingRecordId.value
+                            if (ridingRecordId != null && crashEvent.lat != null && crashEvent.lon != null) {
+                                Log.d("AppNavigation", "서버에 사고 보고 중...")
+
+                                // timestamp를 ISO 8601 형식으로 변환
+                                val isoTimestamp = java.text.SimpleDateFormat(
+                                    "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                                    java.util.Locale.US
+                                ).apply {
+                                    timeZone = java.util.TimeZone.getTimeZone("UTC")
+                                }.format(java.util.Date(crashEvent.timestamp))
+
+                                drivingRepository.reportAccident(
+                                    ridingRecordId = ridingRecordId,
+                                    lat = crashEvent.lat,
+                                    lon = crashEvent.lon,
+                                    ele = crashEvent.ele,
+                                    gravityForce = crashEvent.impactMagnitude.toDouble(),
+                                    leanAngle = crashEvent.leanAngle,
+                                    timestamp = isoTimestamp
+                                ).onSuccess {
+                                    Log.d("AppNavigation", "사고 보고 성공")
+                                }.onFailure { error ->
+                                    Log.e("AppNavigation", "사고 보고 실패: ${error.message}")
+                                }
+                            } else {
+                                Log.w("AppNavigation", "사고 보고 실패: ridingRecordId 또는 위치 정보 없음")
+                            }
+                        }
                     },
                 )
             }
@@ -293,9 +344,13 @@ fun MapApp(
             }
             BottomTab.REPORT -> {
                 val localRidingRecordRepository = GlobalApplication.getLocalRidingRecordRepository(context)
+                val ridingStatisticsRepository = GlobalApplication.getRidingStatisticsRepository(context)
                 val ridingReportViewModel =
                     androidx.lifecycle.viewmodel.compose.viewModel<net.ritirp.myapplication.presentation.viewmodel.RidingReportViewModel>(
-                        factory = net.ritirp.myapplication.presentation.viewmodel.RidingReportViewModelFactory(localRidingRecordRepository),
+                        factory = net.ritirp.myapplication.presentation.viewmodel.RidingReportViewModelFactory(
+                            localRidingRecordRepository,
+                            ridingStatisticsRepository
+                        ),
                     )
                 net.ritirp.myapplication.presentation.screen.RidingReportScreen(
                     viewModel = ridingReportViewModel,
@@ -367,24 +422,6 @@ fun PlaceholderScreen(
     }
 }
 
-private fun setupMap(
-    map: KakaoMap,
-    defaultLocation: LocationData,
-) {
-    val cameraPosition =
-        CameraPosition.from(
-            defaultLocation.latitude,
-            defaultLocation.longitude,
-            13,
-            0.0,
-            0.0,
-            0.0, // 줌 레벨을 13으로 조정
-        )
-    map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
-    map.moveCamera(CameraUpdateFactory.zoomTo(13)) // 줌 레벨을 13으로 변경
-    println("DEBUG: Map setup completed with zoom level 13 at ${defaultLocation.latitude}, ${defaultLocation.longitude}")
-}
-
 // 프리뷰용 컴포넌트들
 @Preview(showBackground = true, name = "지도 앱 프리뷰")
 @Composable
@@ -439,6 +476,12 @@ private fun MapScreenContent(
     isPreview: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    // 경로 입력 다이얼로그 상태
+    var showRouteDialog by remember { mutableStateOf(false) }
+    // 선택된 출발지와 도착지 위치 저장
+    var selectedDeparture by remember { mutableStateOf<LocationData?>(null) }
+    var selectedDestination by remember { mutableStateOf<LocationData?>(null) }
+
     Box(modifier = modifier.fillMaxSize()) {
         if (isPreview) {
             // 프리뷰용 지도 영역
@@ -473,6 +516,7 @@ private fun MapScreenContent(
         // 공통 UI 오버레이들
         TopSearchBar(
             onFriendClick = { /* TODO: 친구 기능 */ },
+            onSearchBarClick = { showRouteDialog = true },
         )
 
         CurrentLocationButton(
@@ -484,7 +528,20 @@ private fun MapScreenContent(
                     .padding(bottom = 120.dp, end = 20.dp),
         )
 
-        // 팀 라이딩 중단 버튼 (라이딩 중일 때만 표시) - 화면 상단 오른쪽
+        // 기울기 캘리브레이션 버튼 - 화면 상단 오른쪽
+        Button(
+            onClick = { viewModel?.calibrateLeanAngle() },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 120.dp, end = 16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF5C6BC0),
+            ),
+        ) {
+            Text("📐 기울기 초기화", color = Color.White, fontSize = 12.sp)
+        }
+
+        // 팀 라이딩 중단 버튼 (라이딩 중일 때만 표시) - 화면 상단 오른쪽 아래
         if (teamViewModel != null) {
             val teamUiState by teamViewModel.uiState.collectAsStateWithLifecycle()
 
@@ -493,7 +550,7 @@ private fun MapScreenContent(
                     onClick = { teamViewModel.endRiding() },
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = 120.dp, end = 16.dp),
+                        .padding(top = 176.dp, end = 16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFEF5350),
                     ),
@@ -525,6 +582,61 @@ private fun MapScreenContent(
             LoadingIndicator()
         }
     }
+
+    // 경로 입력 다이얼로그
+    if (showRouteDialog) {
+        RouteInputDialog(
+            currentLocationName = "내 현재 위치",
+            onDismiss = {
+                showRouteDialog = false
+                selectedDeparture = null
+                selectedDestination = null
+                viewModel?.clearSearchResults()
+            },
+            onConfirm = { departure: String, destination: String ->
+                Log.d("MainActivity", "경로 설정: 출발지=$departure, 도착지=$destination")
+
+                // 출발지가 "내 현재 위치"인 경우 현재 위치 사용, 아니면 선택된 출발지 사용
+                val departureLocation = if (departure == "내 현재 위치" || selectedDeparture == null) {
+                    uiState.currentLocation
+                } else {
+                    selectedDeparture!!
+                }
+
+                // 도착지는 선택된 위치 사용
+                selectedDestination?.let { dest ->
+                    Log.d("MainActivity", "경로 검색 시작: 출발지=(${departureLocation.latitude}, ${departureLocation.longitude}), 도착지=(${dest.latitude}, ${dest.longitude})")
+                    viewModel?.setRoute(departureLocation, dest)
+                }
+
+                showRouteDialog = false
+                selectedDeparture = null
+                selectedDestination = null
+                viewModel?.clearSearchResults()
+            },
+            searchResults = uiState.searchResults,
+            onSearch = { keyword: String ->
+                viewModel?.searchPlace(keyword)
+            },
+            onSelectSearchResult = { poi: net.ritirp.myapplication.data.api.Poi, isDeparture: Boolean ->
+                val lat = poi.getLatitude()
+                val lon = poi.getLongitude()
+                if (lat != null && lon != null) {
+                    val location = LocationData(lat, lon)
+                    if (isDeparture) {
+                        // 출발지 선택
+                        selectedDeparture = location
+                        Log.d("MainActivity", "출발지 선택됨: ${poi.name} (${lat}, ${lon})")
+                    } else {
+                        // 도착지 선택
+                        selectedDestination = location
+                        Log.d("MainActivity", "도착지 선택됨: ${poi.name} (${lat}, ${lon})")
+                    }
+                }
+            },
+            isSearching = uiState.isSearching,
+        )
+    }
 }
 
 @Composable
@@ -533,7 +645,8 @@ private fun RidingMetricsOverlay(
     modifier: Modifier = Modifier,
 ) {
     val ridingMetrics: RidingMetrics by viewModel.ridingMetrics.collectAsState()
-    if (ridingMetrics.totalDistance > 0 || ridingMetrics.durationInSeconds > 0) {
+    // 주행 중일 때만 표시
+    if (ridingMetrics.isRiding) {
         RidingMetricsBar(
             metrics = ridingMetrics,
             modifier = modifier,
@@ -550,6 +663,7 @@ private fun MapContent(
     var kakaoMap by remember { mutableStateOf<KakaoMap?>(null) }
     var isMapReady by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // 카메라 이동 이벤트 감지
     viewModel?.let { vm ->
@@ -559,7 +673,7 @@ private fun MapContent(
             cameraUpdateEvent?.let { location ->
                 if (kakaoMap != null && isMapReady) {
                     println("DEBUG: Moving camera to current location: ${location.latitude}, ${location.longitude}")
-                    MapUtils.moveCameraToLocation(kakaoMap, location, 13) // 줌 레벨을 13으로 변경
+                    MapUtils.moveCameraToLocation(kakaoMap, location, 11) // 줌 레벨을 11로 변경
                     // 이벤트 처리 후 초기화 (무한 루프 방지)
                     vm.clearCameraUpdateEvent()
                 }
@@ -567,20 +681,49 @@ private fun MapContent(
         }
     }
 
-    // 내 위치 라벨 업데이트 (독립적)
-    LaunchedEffect(uiState.currentLocation, isMapReady) {
+    // 사고 정보 수집
+    val drivingRepository = GlobalApplication.getDrivingRepository(context)
+    val accidents = drivingRepository.accidents.collectAsState().value
+    val accidentUserIds = remember(accidents) {
+        accidents.map { it.userId }.toSet()
+    }
+
+    // 내 userId 가져오기
+    val authRepository = GlobalApplication.getAuthRepository(context)
+    val myUserId by authRepository.getUserId().collectAsState(initial = null)
+
+    // 내가 사고를 당했는지 확인
+    val isMyAccident = remember(accidentUserIds, myUserId) {
+        myUserId != null && accidentUserIds.contains(myUserId)
+    }
+
+    // 내 위치 라벨 업데이트 (독립적) - 사고 정보 포함
+    LaunchedEffect(uiState.currentLocation, isMyAccident, isMapReady) {
         if (kakaoMap != null && isMapReady) {
             kakaoMap?.let { map ->
-                MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation, context)
+                MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation, context, isMyAccident)
             }
         }
     }
 
-    // 친구 라벨 업데이트 (독립적)
-    LaunchedEffect(uiState.markers, isMapReady) {
+    // 친구 라벨 업데이트 (독립적) - 사고 정보 포함
+    LaunchedEffect(uiState.markers, accidentUserIds, isMapReady) {
         if (kakaoMap != null && isMapReady) {
             kakaoMap?.let { map ->
-                MapUtils.addTeamMarkers(map, uiState.markers, context)
+                MapUtils.addTeamMarkers(map, uiState.markers, context, accidentUserIds)
+            }
+        }
+    }
+
+    // 사고 알림 표시 (스낵바)
+    LaunchedEffect(accidents) {
+        if (accidents.isNotEmpty()) {
+            accidents.forEach { accident ->
+                val userName = accident.userName ?: "팀원"
+                snackbarHostState.showSnackbar(
+                    message = "⚠️ $userName 님이 사고를 당했습니다!",
+                    duration = SnackbarDuration.Long
+                )
             }
         }
     }
@@ -625,8 +768,16 @@ private fun MapContent(
                             kakaoMap = map
                             isMapReady = true
 
-                            // 초기 카메라 위치 설정
-                            setupMap(map, uiState.currentLocation)
+                            // 초기 카메라 위치 설정 (줌 레벨 11로 명시적 설정)
+                            val initialPosition = CameraPosition.from(
+                                uiState.currentLocation.latitude,
+                                uiState.currentLocation.longitude,
+                                11, // 줌 레벨 11
+                                0.0,
+                                0.0,
+                                0.0
+                            )
+                            map.moveCamera(CameraUpdateFactory.newCameraPosition(initialPosition))
 
                             // 지도 클릭 리스너 설정
                             map.setOnMapClickListener { _, latLng, _, _ ->
@@ -635,8 +786,8 @@ private fun MapContent(
                             }
 
                             // 초기 마커 표시 (경로는 LaunchedEffect에서 처리)
-                            MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation, context)
-                            MapUtils.addTeamMarkers(map, uiState.markers, context)
+                            MapUtils.addOrUpdateCurrentLocationMarker(map, uiState.currentLocation, context, isMyAccident)
+                            MapUtils.addTeamMarkers(map, uiState.markers, context, accidentUserIds)
                             uiState.destination?.let { dest ->
                                 MapUtils.addDestinationMarker(map, dest)
                             }
@@ -646,4 +797,24 @@ private fun MapContent(
             }
         },
     )
+
+    // 스낵바 호스트 - 화면 하단에 표시
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = 80.dp),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        ) { data ->
+            Snackbar(
+                snackbarData = data,
+                containerColor = Color(0xFFEF5350),
+                contentColor = Color.White,
+                shape = MaterialTheme.shapes.medium
+            )
+        }
+    }
 }

@@ -123,6 +123,15 @@ class AuthRepository(private val context: Context) {
     }
 
     /**
+     * 사용자 ID 조회
+     */
+    fun getUserId(): Flow<String?> {
+        return dataStore.data.map { preferences ->
+            preferences[DataStoreManager.USER_ID_KEY]
+        }
+    }
+
+    /**
      * 사용자 정보 조회
      */
     fun getUserData(): Flow<UserData?> {

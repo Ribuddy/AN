@@ -27,12 +27,13 @@ object MapUtils {
 
     // Bitmap 캐시 (lazy initialization)
     private var cachedBuddyBitmap: Bitmap? = null
+    private var cachedAccidentBitmap: Bitmap? = null
 
     /**
      * VectorDrawable을 Bitmap으로 변환
      * @param context Context
      * @param drawableId Drawable 리소스 ID
-     * @param sizeDp 크기 (dp)
+     * @param sizeDp 크기 (dp) - 원본 비율을 유지하며 긴 쪽이 이 크기가 됨
      * @return Bitmap
      */
     fun vectorToBitmap(context: Context, drawableId: Int, sizeDp: Int): Bitmap? {
@@ -40,7 +41,22 @@ object MapUtils {
             val drawable = ContextCompat.getDrawable(context, drawableId) ?: return null
             val density = context.resources.displayMetrics.density
             val sizePx = (sizeDp * density).toInt()
-            drawable.toBitmap(width = sizePx, height = sizePx, config = Bitmap.Config.ARGB_8888)
+
+            // 원본 비율 계산
+            val intrinsicWidth = drawable.intrinsicWidth
+            val intrinsicHeight = drawable.intrinsicHeight
+
+            // 원본 비율을 유지하면서 긴 쪽을 sizePx로 맞춤
+            val (width, height) = if (intrinsicWidth > intrinsicHeight) {
+                val ratio = intrinsicHeight.toFloat() / intrinsicWidth.toFloat()
+                Pair(sizePx, (sizePx * ratio).toInt())
+            } else {
+                val ratio = intrinsicWidth.toFloat() / intrinsicHeight.toFloat()
+                Pair((sizePx * ratio).toInt(), sizePx)
+            }
+
+            println("DEBUG: Converting vector to bitmap - original: ${intrinsicWidth}x${intrinsicHeight}, output: ${width}x${height}")
+            drawable.toBitmap(width = width, height = height, config = Bitmap.Config.ARGB_8888)
         } catch (e: Exception) {
             println("DEBUG: Failed to convert vector to bitmap: ${e.message}")
             e.printStackTrace()
@@ -60,16 +76,29 @@ object MapUtils {
     }
 
     /**
+     * 사고 아이콘 Bitmap 가져오기 (캐싱)
+     */
+    private fun getAccidentBitmap(context: Context): Bitmap? {
+        if (cachedAccidentBitmap == null) {
+            cachedAccidentBitmap = vectorToBitmap(context, R.drawable.ic_accident_friend, 80)
+            println("DEBUG: Accident bitmap cached")
+        }
+        return cachedAccidentBitmap
+    }
+
+    /**
      * 내 위치 라벨 추가/업데이트 (layer_me)
      * - 레이어: layer_me
      * - 라벨 ID: "me"
-     * - 아이콘: Bitmap (R.drawable.ic_buddy)
-     * - 존재하면 moveTo로 업데이트, 없으면 생성
+     * - 아이콘: Bitmap (R.drawable.ic_buddy 또는 사고 시 R.drawable.ic_accident_friend)
+     * - 존재하면 삭제 후 재생성 (스타일 변경을 위해)
+     * @param isAccident 사고 발생 여부
      */
     fun addOrUpdateCurrentLocationMarker(
         map: KakaoMap?,
         location: LocationData,
         context: Context,
+        isAccident: Boolean = false,
     ) {
         if (map == null) {
             println("DEBUG: Map is null")
@@ -81,12 +110,12 @@ object MapUtils {
             return
         }
 
-        println("DEBUG: Updating my location label at ${location.latitude}, ${location.longitude}")
+        println("DEBUG: Updating my location label at ${location.latitude}, ${location.longitude}, accident=$isAccident")
 
         try {
-            // layer_me 레이어 가져오기 또는 생성
+            // layer_me 레이어 가져오기 또는 생성 (Z-Order를 낮춰서 팀원 마커 아래에 표시)
             val layer = labelManager.getLayer("layer_me") ?: run {
-                val layerOptions = LabelLayerOptions.from("layer_me").setZOrder(10002)
+                val layerOptions = LabelLayerOptions.from("layer_me").setZOrder(10001)
                 labelManager.addLayer(layerOptions)
             }
 
@@ -98,28 +127,36 @@ object MapUtils {
             val latLng = LatLng.from(location.latitude, location.longitude)
             val existingLabel = layer.getLabel("me")
 
-            if (existingLabel != null) {
-                // 이미 존재하면 moveTo로 위치만 업데이트 (깜빡임 없음)
-                existingLabel.moveTo(latLng)
-                println("DEBUG: My location label moved to new position")
+            // 적절한 비트맵 선택
+            val bitmap = if (isAccident) {
+                println("DEBUG: Using ACCIDENT bitmap for my location")
+                getAccidentBitmap(context)
             } else {
-                // 없으면 새로 생성
-                val buddyBitmap = getBuddyBitmap(context)
-                if (buddyBitmap == null) {
-                    println("DEBUG: Failed to get buddy bitmap")
-                    return
-                }
+                println("DEBUG: Using BUDDY bitmap for my location")
+                getBuddyBitmap(context)
+            }
 
-                val options = LabelOptions
-                    .from("me", latLng)
-                    .setStyles(buddyBitmap)
+            if (bitmap == null) {
+                println("DEBUG: Failed to get bitmap for my location")
+                return
+            }
 
-                val label = layer.addLabel(options)
-                if (label != null) {
-                    println("DEBUG: My location label created successfully with bitmap")
-                } else {
-                    println("DEBUG: Failed to create my location label")
-                }
+            // 기존 라벨이 있으면 삭제 (스타일 변경을 위해)
+            if (existingLabel != null) {
+                layer.remove(existingLabel)
+                println("DEBUG: Removed existing my location label for recreation")
+            }
+
+            // 새로 생성
+            val options = LabelOptions
+                .from("me", latLng)
+                .setStyles(bitmap)
+
+            val label = layer.addLabel(options)
+            if (label != null) {
+                println("DEBUG: ✅ My location label created with ${if (isAccident) "ACCIDENT" else "BUDDY"} icon")
+            } else {
+                println("DEBUG: ❌ Failed to create my location label")
             }
         } catch (e: Exception) {
             println("DEBUG: Exception while updating my location label: ${e.message}")
@@ -193,15 +230,16 @@ object MapUtils {
         map: KakaoMap,
         markers: List<MarkerData>,
         context: Context,
+        accidentUserIds: Set<String> = emptySet(), // 사고난 팀원 ID 목록
     ) {
         val labelManager = map.labelManager ?: return
 
-        println("DEBUG: Updating team markers, count: ${markers.size}")
+        println("DEBUG: Updating team markers, count: ${markers.size}, accidents: ${accidentUserIds.size}")
 
         try {
             // layer_buddies 레이어 가져오기 또는 생성
             val layer = labelManager.getLayer("layer_buddies") ?: run {
-                val layerOptions = LabelLayerOptions.from("layer_buddies").setZOrder(10001)
+                val layerOptions = LabelLayerOptions.from("layer_buddies").setZOrder(10003)
                 labelManager.addLayer(layerOptions)
             }
 
@@ -220,34 +258,42 @@ object MapUtils {
             teamMarkers.forEach { marker ->
                 val labelId = "buddy_${marker.id}"
                 val latLng = LatLng.from(marker.location.latitude, marker.location.longitude)
-                val existingLabel = layer.getLabel(labelId)
 
-                if (existingLabel != null) {
-                    // 이미 존재하면 moveTo로 위치만 업데이트
-                    existingLabel.moveTo(latLng)
-                    println("DEBUG: Buddy label $labelId moved to new position")
+                // 사고난 팀원인지 확인
+                val isAccident = accidentUserIds.contains(marker.id)
+                println("DEBUG: Processing marker ${marker.id}, isAccident=$isAccident, accidentUserIds=$accidentUserIds")
+
+                // 적절한 비트맵 선택
+                val bitmap = if (isAccident) {
+                    println("DEBUG: Using ACCIDENT bitmap for ${marker.id}")
+                    getAccidentBitmap(context)
                 } else {
-                    // 없으면 새로 생성
-                    val buddyBitmap = getBuddyBitmap(context)
-                    if (buddyBitmap == null) {
-                        println("DEBUG: Failed to get buddy bitmap for $labelId")
-                        return@forEach
-                    }
+                    println("DEBUG: Using BUDDY bitmap for ${marker.id}")
+                    getBuddyBitmap(context)
+                }
 
-                    // 마커 텍스트 추가 (선택) - 텍스트는 아이콘 위에 표시
-                    val textBuilder = LabelTextBuilder().setTexts(marker.emoji)
+                if (bitmap == null) {
+                    println("DEBUG: Failed to get bitmap for $labelId")
+                    return@forEach
+                }
 
-                    val options = LabelOptions
-                        .from(labelId, latLng)
-                        .setStyles(buddyBitmap)
-                        .setTexts(textBuilder)
+                // 기존 라벨이 있으면 항상 삭제 (스타일 변경을 위해)
+                val existingLabel = layer.getLabel(labelId)
+                if (existingLabel != null) {
+                    layer.remove(existingLabel)
+                    println("DEBUG: Removed existing label $labelId for recreation (accident: $isAccident)")
+                }
 
-                    val label = layer.addLabel(options)
-                    if (label != null) {
-                        println("DEBUG: Buddy label $labelId created successfully with bitmap")
-                    } else {
-                        println("DEBUG: Failed to create buddy label $labelId")
-                    }
+                // 라벨 생성 (항상 새로 생성)
+                val options = LabelOptions
+                    .from(labelId, latLng)
+                    .setStyles(bitmap)
+
+                val label = layer.addLabel(options)
+                if (label != null) {
+                    println("DEBUG: ✅ Buddy label $labelId created with ${if (isAccident) "ACCIDENT" else "BUDDY"} icon")
+                } else {
+                    println("DEBUG: ❌ Failed to create buddy label $labelId")
                 }
             }
 
@@ -410,7 +456,7 @@ object MapUtils {
     fun moveCameraToLocation(
         map: KakaoMap?,
         location: LocationData,
-        zoomLevel: Int = 13,
+        zoomLevel: Int = 11,
     ) {
         if (map == null) {
             println("DEBUG: Map is null, cannot move camera")

@@ -12,7 +12,7 @@ class RidingRecordRepository(
     private val ridingRecordDao: RidingRecordDao,
 ) {
     /**
-     * 주행 기록 저장
+     * 주행 기록 저장 (새 레코드 생성)
      */
     suspend fun saveRidingRecord(
         metrics: RidingMetrics,
@@ -32,6 +32,32 @@ class RidingRecordRepository(
                 teamName = teamName,
             )
         return ridingRecordDao.insert(entity)
+    }
+
+    /**
+     * 주행 기록 업데이트 (3초마다 호출)
+     */
+    suspend fun updateRidingRecord(
+        recordId: Long,
+        metrics: RidingMetrics,
+        isCompleted: Boolean = false,
+    ) {
+        // 기존 레코드를 조회
+        val existingRecord = ridingRecordDao.getRecord(recordId)
+        if (existingRecord != null) {
+            // 기존 레코드의 필드를 업데이트
+            val updatedEntity = existingRecord.copy(
+                endTime = System.currentTimeMillis(),
+                totalDistance = metrics.totalDistance,
+                topSpeed = metrics.topSpeed,
+                averageSpeed = metrics.averageSpeed,
+                maxLeanAngle = metrics.maxLeanAngle,
+                totalClimb = metrics.totalClimb,
+                totalFall = metrics.totalFall,
+                duration = metrics.duration,
+            )
+            ridingRecordDao.update(updatedEntity)
+        }
     }
 
     /**

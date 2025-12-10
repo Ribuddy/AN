@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import net.ritirp.myapplication.data.api.Poi
 import net.ritirp.myapplication.data.model.LocationData
 import net.ritirp.myapplication.data.model.MarkerData
 import net.ritirp.myapplication.data.model.RidingMetrics
@@ -20,6 +21,7 @@ import net.ritirp.myapplication.service.RidingMetricsTracker
 data class MapUiState(
     val currentLocation: LocationData = LocationData.DEFAULT_SEOUL,
     val destination: LocationData? = null,
+    val departure: LocationData? = null, // 출발지 추가
     val route: RouteData? = null,
     val routePoints: List<com.kakao.vectormap.LatLng> = emptyList(), // 서버에서 받은 경로 좌표들
     val markers: List<MarkerData> = emptyList(),
@@ -27,6 +29,8 @@ data class MapUiState(
     val isLocationPermissionGranted: Boolean = false,
     val currentTab: BottomTab = BottomTab.MAP,
     val isLoading: Boolean = false,
+    val searchResults: List<Poi> = emptyList(),
+    val isSearching: Boolean = false,
 )
 
 enum class BottomTab(
@@ -153,6 +157,77 @@ class MapViewModel(
 
     fun selectTab(tab: BottomTab) {
         _uiState.value = _uiState.value.copy(currentTab = tab)
+    }
+
+    /**
+     * 기울기 캘리브레이션
+     */
+    fun calibrateLeanAngle() {
+        ridingMetricsTracker?.calibrateLeanAngle()
+    }
+
+    /**
+     * 장소 검색
+     */
+    fun searchPlace(keyword: String) {
+        if (keyword.isBlank()) {
+            _uiState.value = _uiState.value.copy(searchResults = emptyList())
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSearching = true)
+            try {
+                val currentLocation = _uiState.value.currentLocation
+                val results = mapRepository.searchPlace(
+                    keyword = keyword,
+                    centerLat = currentLocation.latitude,
+                    centerLon = currentLocation.longitude
+                )
+                _uiState.value = _uiState.value.copy(searchResults = results)
+            } catch (e: Exception) {
+                println("DEBUG: Error searching place: ${e.message}")
+                e.printStackTrace()
+                _uiState.value = _uiState.value.copy(searchResults = emptyList())
+            } finally {
+                _uiState.value = _uiState.value.copy(isSearching = false)
+            }
+        }
+    }
+
+    /**
+     * 검색 결과 초기화
+     */
+    fun clearSearchResults() {
+        _uiState.value = _uiState.value.copy(searchResults = emptyList())
+    }
+
+    /**
+     * 출발지와 도착지를 설정하고 경로를 검색
+     */
+    fun setRoute(departure: LocationData, destination: LocationData) {
+        println("DEBUG: ViewModel setRoute - departure: ${departure.latitude}, ${departure.longitude}, destination: ${destination.latitude}, ${destination.longitude}")
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                departure = departure,
+                destination = destination
+            )
+            try {
+                val routePoints = mapRepository.getRoute(departure, destination)
+                _uiState.value = _uiState.value.copy(routePoints = routePoints)
+                println("DEBUG: Updated routePoints in UI state: ${routePoints.size} points")
+
+                // 목적지를 Repository에도 설정
+                mapRepository.setDestination(destination)
+            } catch (e: Exception) {
+                println("DEBUG: Error getting route: ${e.message}")
+                e.printStackTrace()
+            } finally {
+                _uiState.value = _uiState.value.copy(isLoading = false)
+            }
+        }
     }
 }
 

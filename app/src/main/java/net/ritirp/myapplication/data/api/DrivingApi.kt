@@ -26,7 +26,7 @@ interface DrivingApi {
         @Header("Authorization") token: String,
         @Path("ridingRecordId") ridingRecordId: String,
         @Body location: LocationUpdateRequest,
-    ): Response<ApiResponse<List<TeamMemberLocation>>>
+    ): Response<ApiResponse<LocationUpdateResponse>>
 
     /**
      * 팀 라이딩 종료
@@ -36,5 +36,59 @@ interface DrivingApi {
         @Header("Authorization") token: String,
         @Path("ridingRecordId") ridingRecordId: String,
         @Body request: EndTeamRidingRequest,
+    ): Response<ApiResponse<Unit>>
+
+    /**
+     * 주간 주행 통계 조회
+     */
+    @GET("v1/driving/statistics/weekly")
+    suspend fun getWeeklyStatistics(
+        @Query("startDate") startDate: String? = null,
+    ): Response<ApiResponse<WeeklyStatisticsResponse>>
+
+    /**
+     * 월간 주행 통계 조회
+     */
+    @GET("v1/driving/statistics/monthly")
+    suspend fun getMonthlyStatistics(
+        @Query("year") year: Int? = null,
+    ): Response<ApiResponse<MonthlyStatisticsResponse>>
+
+    /**
+     * 연간 주행 통계 조회
+     */
+    @GET("v1/driving/statistics/yearly")
+    suspend fun getYearlyStatistics(): Response<ApiResponse<YearlyStatisticsResponse>>
+
+    /**
+     * 주행 리포트 조회
+     */
+    @GET("v1/driving/team/report")
+    suspend fun getDrivingReport(
+        @Query("ridingRecordId") ridingRecordId: String,
+    ): Response<ApiResponse<RidingReportResponse>>
+
+    /**
+     * 내 라이딩 기록 목록 조회
+     */
+    @GET("v1/driving/team/my-records")
+    suspend fun getMyRidingRecords(): Response<ApiResponse<MyRidingRecordsResponse>>
+
+    /**
+     * 사고 발생 보고
+     */
+    @POST("v1/driving/event/accident")
+    suspend fun reportAccident(
+        @Header("Authorization") token: String,
+        @Body request: AccidentReportRequest,
+    ): Response<ApiResponse<Unit>>
+
+    /**
+     * 급가속/급정거 보고
+     */
+    @POST("v1/driving/event/sudden-speed-change")
+    suspend fun reportSuddenSpeedChange(
+        @Header("Authorization") token: String,
+        @Body request: SuddenSpeedChangeReportRequest,
     ): Response<ApiResponse<Unit>>
 }

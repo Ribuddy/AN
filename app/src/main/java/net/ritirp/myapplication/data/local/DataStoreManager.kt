@@ -21,6 +21,7 @@ object DataStoreManager {
     val USER_EMAIL_KEY = stringPreferencesKey("user_email")
     val USER_NAME_KEY = stringPreferencesKey("user_name")
     val RIBUDDY_ID_KEY = stringPreferencesKey("ribuddy_id")
+    val CURRENT_RIDING_RECORD_ID_KEY = stringPreferencesKey("current_riding_record_id")
 
     fun getDataStore(context: Context): DataStore<Preferences> {
         return context.authDataStore
